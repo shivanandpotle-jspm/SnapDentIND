@@ -1,0 +1,228 @@
+/* ============================================
+   CHECKOUT SHARED STYLES (Shipping, Payment, Success)
+   ============================================ */
+.checkout-page {
+  min-height: calc(100vh - 72px);
+}
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+}
+
+@media (min-width: 1024px) {
+  .checkout-layout { grid-template-columns: 2fr 1fr; }
+}
+
+.checkout-form-wrap {
+  padding: var(--space-xl);
+  height: fit-content;
+}
+
+.checkout-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: var(--space-xl);
+  color: var(--primary);
+}
+
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.checkout-form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 640px) {
+  .checkout-form-row { grid-template-columns: 1fr 1fr; }
+}
+
+.checkout-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--outline-variant);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.checkout-summary {
+  padding: 32px;
+  background: var(--surface);
+  height: fit-content;
+  position: sticky;
+  top: 120px;
+}
+
+.summary-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-bottom: 24px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  font-size: 15px;
+}
+
+.summary-label {
+  color: var(--on-surface-variant);
+}
+
+.summary-value {
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.free-shipping-text {
+  color: #16a34a;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+}
+
+.summary-divider {
+  height: 1px;
+  background: var(--outline-variant);
+  margin: 16px 0;
+}
+
+.summary-total {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--on-surface);
+  padding-bottom: 24px;
+}
+
+/* Payment specific */
+.payment-methods {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: var(--space-xl);
+}
+
+@media (min-width: 640px) {
+  .payment-methods { grid-template-columns: 1fr 1fr; }
+}
+
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+}
+
+.payment-method input[type="radio"] {
+  accent-color: var(--primary);
+  width: 18px;
+  height: 18px;
+}
+
+.payment-method-icon {
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.payment-method-label {
+  font-weight: 600;
+}
+
+.payment-card-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  background: var(--surface-container-low);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xl);
+}
+
+/* Order Success specific */
+.order-success-card {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-4xl) var(--space-xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.order-success-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-lg);
+}
+
+.order-success-icon .material-symbols-outlined {
+  font-size: 48px;
+}
+
+.order-success-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--on-surface);
+}
+
+.order-success-subtitle {
+  font-size: 16px;
+  color: var(--on-surface-variant);
+  margin-bottom: var(--space-2xl);
+  max-width: 420px;
+}
+
+.order-details {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: var(--space-2xl);
+}
+
+.order-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+}
+
+.order-detail-row span {
+  color: var(--on-surface-variant);
+}
+
+.order-detail-row strong {
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.order-success-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}

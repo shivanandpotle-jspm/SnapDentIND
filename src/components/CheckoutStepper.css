@@ -1,0 +1,5 @@
+.checkout-stepper {
+  max-width: 640px;
+  margin: 0 auto var(--space-3xl);
+  padding: 0 var(--space-md);
+}
