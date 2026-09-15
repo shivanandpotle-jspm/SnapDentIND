@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { useStore } from '../store';
 import './Shop.css';
@@ -76,7 +77,8 @@ export default function Shop() {
   };
 
   return (
-    <main className="shop-page container-max animate-fade-in-up">
+    <>
+      <main className="shop-page animate-fade-in-up">
       
       {/* Shop Page Header */}
       <div className="shop-header">
@@ -224,6 +226,7 @@ export default function Shop() {
           )}
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

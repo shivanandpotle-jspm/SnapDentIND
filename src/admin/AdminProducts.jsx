@@ -12,6 +12,7 @@ export default function AdminProducts() {
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [productList, setProductList] = useState(products);
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function AdminProducts() {
 
   const openAdd = () => {
     setEditId(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, sku: `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}` });
     setFormErrors({});
     setShowForm(true);
   };
@@ -106,6 +107,37 @@ export default function AdminProducts() {
     
     showToast(`Product "${deleteTarget.name}" deleted`, 'success');
     setDeleteTarget(null);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setForm({ ...form, image: data.url });
+        showToast('Image uploaded successfully', 'success');
+      } else {
+        showToast(data.error || 'Upload failed', 'error');
+      }
+    } catch (err) {
+      showToast('Error uploading image', 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const showToast = (msg, type) => {
@@ -230,10 +262,29 @@ export default function AdminProducts() {
               <div className="admin-form-card">
                 <h3>Product Image</h3>
                 <div className="admin-form-group">
-                  <label className="admin-form-label">Image URL</label>
-                  <input className="admin-form-input" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="https://..." />
+                  <label className="admin-form-label">Upload Image</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="admin-form-input" 
+                    onChange={handleImageUpload} 
+                    disabled={isUploading}
+                  />
+                  {isUploading && <div className="admin-form-hint">Uploading...</div>}
                 </div>
-                {form.image && <img src={form.image} alt="Preview" style={{ width: '100%', borderRadius: 8, border: '1px solid var(--admin-border)' }} />}
+                {form.image && (
+                  <div>
+                    <img src={form.image} alt="Preview" style={{ width: '100%', borderRadius: 8, border: '1px solid var(--admin-border)' }} />
+                    <button 
+                      type="button" 
+                      className="admin-btn admin-btn--secondary" 
+                      style={{ marginTop: 8, width: '100%' }}
+                      onClick={() => setForm({ ...form, image: '' })}
+                    >
+                      Remove Image
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>

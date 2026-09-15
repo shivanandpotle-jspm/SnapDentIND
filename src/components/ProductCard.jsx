@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore, updateStore } from '../store';
+import { useAuth } from '../context/AuthContext';
+import { addToCart } from '../api/cart';
 import './ProductCard.css';
 
 export default function ProductCard({ product }) {
   const [added, setAdded] = useState(false);
   const store = useStore();
+  const { isAuthenticated } = useAuth();
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     if (!product.inStock) return;
     
@@ -20,24 +23,33 @@ export default function ProductCard({ product }) {
     }
     updateStore('cart', newCart);
 
+    if (isAuthenticated) {
+      try {
+        const data = await addToCart(product.id, 1);
+        updateStore('cart', data.cart);
+      } catch (err) {
+        console.error('Failed to add to backend cart', err);
+      }
+    }
+
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
 
   return (
     <div className="product-card card">
-      <div className="product-card__image-wrap">
+      <Link to={`/product/${product.id}`} className="product-card__image-wrap" style={{ display: 'block', textDecoration: 'none' }}>
         <img src={product.image} alt={product.name} loading="lazy" />
         {product.badge && (
           <span className="product-card__badge">{product.badge}</span>
         )}
         <div className="product-card__overlay">
-          <button className="product-card__quick-view btn">
+          <span className="product-card__quick-view btn">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>visibility</span>
             Quick View
-          </button>
+          </span>
         </div>
-      </div>
+      </Link>
       <div className="product-card__body">
         <div className="product-card__meta">
           <span className="product-card__category">{product.category}</span>
@@ -45,11 +57,13 @@ export default function ProductCard({ product }) {
             <span className="product-card__subcategory">• {product.subcategory}</span>
           )}
         </div>
-        <h3 className="product-card__name" title={product.name}>{product.name}</h3>
+        <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <h3 className="product-card__name" title={product.name}>{product.name}</h3>
+        </Link>
         <p className="product-card__desc">{product.description}</p>
         <div className="product-card__footer">
           <div className="product-card__price-wrap">
-            <span className="product-card__price">${product.price.toFixed(2)}</span>
+            <span className="product-card__price">₹{product.price.toFixed(2)}</span>
           </div>
           <button
             className={`product-card__add-btn btn btn-primary ${added ? 'product-card__add-btn--added' : ''}`}

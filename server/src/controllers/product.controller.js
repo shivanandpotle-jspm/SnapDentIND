@@ -1,0 +1,196 @@
+import Product from '../models/Product.js';
+import fs from 'fs';
+import path from 'path';
+
+/**
+ * GET /api/products — List products with search, filter, pagination, sort
+ */
+export const getProducts = async (req, res, next) => {
+  try {
+    const { search, category, subcategory, inStock, badge, sort, page = 1, limit = 50 } = req.query;
+
+    const filter = { isVisible: true };
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { material: { $regex: search, $options: 'i' } },
+      ];
+    }
+    if (category) filter.category = category;
+    if (subcategory) filter.subcategory = subcategory;
+    if (inStock !== undefined) filter.inStock = inStock === 'true';
+    if (badge) filter.badge = badge;
+
+    // Sort options
+    let sortObj = { createdAt: -1 };
+    if (sort === 'price_asc') sortObj = { price: 1 };
+    else if (sort === 'price_desc') sortObj = { price: -1 };
+    else if (sort === 'name') sortObj = { name: 1 };
+    else if (sort === 'newest') sortObj = { createdAt: -1 };
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Product.countDocuments(filter);
+    const products = await Product.find(filter)
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      count: products.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+      products,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/products/:slug — Get single product by slug
+ */
+export const getProduct = async (req, res, next) => {
+  try {
+    const product = await Product.findOne({ slug: req.params.slug });
+    if (!product) {
+      return res.status(404).json({ success: false, error: 'Product not found.' });
+    }
+    res.json({ success: true, product });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/products — Create product (Admin)
+ */
+export const createProduct = async (req, res, next) => {
+  try {
+    const {
+      name, category, subcategory, price, discountPrice,
+      description, material, sku, stock, badge, isVisible, isFeatured, image,
+    } = req.body;
+
+    const productData = {
+      name, category, subcategory, price: Number(price),
+      description, material, sku,
+      stock: stock ? Number(stock) : 50,
+      badge: badge || '',
+      isVisible: isVisible !== false,
+      isFeatured: isFeatured === true,
+    };
+
+    if (discountPrice) productData.discountPrice = Number(discountPrice);
+
+    // If an image URL is provided directly (for seeding/placeholder purposes)
+    if (image) {
+      productData.images = [{ url: image, driveFileId: '' }];
+    }
+
+    const product = await Product.create(productData);
+
+    res.status(201).json({ success: true, product });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/products/:id — Update product (Admin)
+ */
+export const updateProduct = async (req, res, next) => {
+  try {
+    const {
+      name, category, subcategory, price, discountPrice,
+      description, material, sku, stock, badge, inStock, isVisible, isFeatured,
+    } = req.body;
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, error: 'Product not found.' });
+    }
+
+    if (name !== undefined) product.name = name;
+    if (category !== undefined) product.category = category;
+    if (subcategory !== undefined) product.subcategory = subcategory;
+    if (price !== undefined) product.price = Number(price);
+    if (discountPrice !== undefined) product.discountPrice = Number(discountPrice);
+    if (description !== undefined) product.description = description;
+    if (material !== undefined) product.material = material;
+    if (sku !== undefined) product.sku = sku;
+    if (stock !== undefined) product.stock = Number(stock);
+    if (badge !== undefined) product.badge = badge;
+    if (inStock !== undefined) product.inStock = inStock;
+    if (isVisible !== undefined) product.isVisible = isVisible;
+    if (isFeatured !== undefined) product.isFeatured = isFeatured;
+
+    await product.save();
+
+    res.json({ success: true, product });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/products/:id — Delete product (Admin)
+ */
+export const deleteProduct = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, error: 'Product not found.' });
+    }
+
+    // Delete images from local storage
+    for (const img of product.images) {
+      if (img.url && img.url.includes('/uploads/')) {
+        const filename = img.url.split('/uploads/')[1];
+        const filepath = path.resolve('public/uploads', filename);
+        if (fs.existsSync(filepath)) {
+          fs.unlinkSync(filepath);
+        }
+      }
+    }
+
+    await product.deleteOne();
+
+    res.json({ success: true, message: 'Product deleted.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/products/:id/images — Upload product images to Google Drive (Admin)
+ */
+export const uploadProductImages = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, error: 'Product not found.' });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, error: 'No images provided.' });
+    }
+
+    const uploadedImages = [];
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    for (const file of req.files) {
+      const url = `${baseUrl}/uploads/${file.filename}`;
+      uploadedImages.push({ url, driveFileId: '' });
+    }
+
+    product.images.push(...uploadedImages);
+    await product.save();
+
+    res.json({ success: true, images: product.images });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -1,39 +1,95 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import CheckoutStepper from '../components/CheckoutStepper';
-import { useStore, updateStore } from '../store';
+import { useAuth } from '../context/AuthContext';
+import { getCart, updateCartItem, removeFromCart } from '../api/cart';
+import { updateStore } from '../store';
 import './Cart.css';
 
 export default function Cart() {
-  const store = useStore();
-  const { products, cart } = store;
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Initialize a mock cart if empty, just for demonstration purposes if needed, 
-  // but let's use the actual cart from the store.
-  
-  // Compute enriched cart items (latest price and details from products list)
-  const cartItems = useMemo(() => {
-    return cart.map(cartItem => {
-      const product = products.find(p => String(p.id) === String(cartItem.id));
-      return product ? { ...product, qty: cartItem.qty } : null;
-    }).filter(Boolean);
-  }, [cart, products]);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
 
-  const updateQty = (id, delta) => {
-    const updated = cart.map(item =>
-      String(item.id) === String(id) ? { ...item, qty: Math.max(1, item.qty + delta) } : item
-    );
-    updateStore('cart', updated);
+    const fetchCart = async () => {
+      try {
+        const data = await getCart();
+        setCartItems(data.cart);
+        updateStore('cart', data.cart);
+      } catch (err) {
+        setError(err.message || 'Failed to load cart');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCart();
+  }, [isAuthenticated]);
+
+  const updateQty = async (id, delta) => {
+    const item = cartItems.find(i => String(i.id) === String(id));
+    if (!item) return;
+    const newQty = Math.max(1, item.qty + delta);
+    
+    // Optimistic update
+    setCartItems(prev => prev.map(i => String(i.id) === String(id) ? { ...i, qty: newQty } : i));
+    
+    try {
+      const data = await updateCartItem(id, newQty);
+      setCartItems(data.cart);
+      updateStore('cart', data.cart);
+    } catch (err) {
+      // Revert on error (could implement full rollback, but just fetching again is safer)
+      const data = await getCart();
+      setCartItems(data.cart);
+    }
   };
 
-  const removeItem = (id) => {
-    const updated = cart.filter(item => String(item.id) !== String(id));
-    updateStore('cart', updated);
+  const removeItem = async (id) => {
+    // Optimistic update
+    setCartItems(prev => prev.filter(i => String(i.id) !== String(id)));
+    
+    try {
+      const data = await removeFromCart(id);
+      setCartItems(data.cart);
+      updateStore('cart', data.cart);
+    } catch (err) {
+      const data = await getCart();
+      setCartItems(data.cart);
+    }
   };
 
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const shipping = subtotal > 500 ? 0 : 25;
+  const shipping = subtotal > 500 ? 0 : 50;
   const total = subtotal + shipping;
+
+  if (!isAuthenticated) {
+    return (
+      <main className="cart-page container-max section-gap animate-fade-in-up">
+        <div className="cart-empty card-elevated" style={{ textAlign: 'center', padding: '60px 20px', maxWidth: 600, margin: '0 auto' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 64, color: '#94a3b8', marginBottom: 24 }}>lock</span>
+          <h3>Please Sign In</h3>
+          <p style={{ color: '#64748b', marginBottom: 24 }}>You need to be logged in to view and manage your cart.</p>
+          <Link to="/login" className="btn btn-primary">Sign In</Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (loading) {
+    return (
+      <main className="cart-page container-max section-gap">
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>Loading cart...</div>
+      </main>
+    );
+  }
 
   return (
     <main className="cart-page container-max section-gap animate-fade-in-up">
@@ -71,7 +127,7 @@ export default function Cart() {
                         <Link to={`/shop`} className="cart-item-name">{item.name}</Link>
                         <p className="cart-item-meta">Material: {item.material}</p>
                       </div>
-                      <span className="cart-item-price-unit">${item.price.toFixed(2)}</span>
+                      <span className="cart-item-price-unit">₹{item.price.toFixed(2)}</span>
                     </div>
 
                     <div className="cart-item-actions">
@@ -87,7 +143,7 @@ export default function Cart() {
 
                       <div className="cart-item-end">
                         <span className="cart-item-price-total">
-                          ${(item.price * item.qty).toFixed(2)}
+                          ₹{(item.price * item.qty).toFixed(2)}
                         </span>
                         <button className="remove-btn" onClick={() => removeItem(item.id)} aria-label="Remove item">
                           <span className="material-symbols-outlined">delete_outline</span>
@@ -109,13 +165,13 @@ export default function Cart() {
             
             <div className="summary-row">
               <span className="summary-label">Subtotal</span>
-              <span className="summary-value">${subtotal.toFixed(2)}</span>
+              <span className="summary-value">₹{subtotal.toFixed(2)}</span>
             </div>
             
             <div className="summary-row">
               <span className="summary-label">Estimated Shipping</span>
               <span className="summary-value">
-                {shipping === 0 ? <span className="free-shipping-text">Free</span> : `$${shipping.toFixed(2)}`}
+                {shipping === 0 ? <span className="free-shipping-text">Free</span> : `₹${shipping.toFixed(2)}`}
               </span>
             </div>
 
@@ -123,7 +179,7 @@ export default function Cart() {
 
             <div className="summary-row summary-total">
               <span>Total</span>
-              <span>${total.toFixed(2)}</span>
+              <span>₹{total.toFixed(2)}</span>
             </div>
 
             {shipping === 0 && subtotal > 0 && (

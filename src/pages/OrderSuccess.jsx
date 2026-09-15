@@ -27,7 +27,7 @@ export default function OrderSuccess() {
           </div>
           <div className="order-detail-row">
             <span>Total Paid</span>
-            <strong>$660.00</strong>
+            <strong>₹660.00</strong>
           </div>
         </div>
 

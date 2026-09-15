@@ -1,20 +1,31 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { adminLoginUser } from '../api/auth';
 import '../pages/Auth.css';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (email === 'admin@snapdent.com' && password === 'admin123') {
+    setError('');
+    setLoading(true);
+
+    try {
+      const data = await adminLoginUser(email, password);
+      login(data.token, data.user);
       localStorage.setItem('snapdent_admin', 'true');
       navigate('/admin');
-    } else {
-      setError('Invalid credentials. Use admin@snapdent.com / admin123');
+    } catch (err) {
+      setError(err.message || 'Invalid admin credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,9 +68,9 @@ export default function AdminLogin() {
             />
           </div>
           <div className="auth-field-group">
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '52px', marginTop: '10px' }}>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '52px', marginTop: '10px' }} disabled={loading}>
               <span className="material-symbols-outlined" style={{ marginRight: '8px' }}>login</span>
-              Sign In to Dashboard
+              {loading ? 'Signing in...' : 'Sign In to Dashboard'}
             </button>
           </div>
         </form>

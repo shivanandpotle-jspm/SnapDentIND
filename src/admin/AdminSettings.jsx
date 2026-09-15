@@ -83,8 +83,19 @@ export default function AdminSettings() {
               onChange={e => setSettings({...settings, currency: e.target.value})}
             >
               <option>INR (₹)</option>
-              <option>USD ($)</option>
+              <option>INR (₹)</option>
             </select>
+          </div>
+        </div>
+        <div className="admin-form-row">
+          <div className="admin-form-group">
+            <label className="admin-form-label">Low Stock Threshold (Alert limit)</label>
+            <input 
+              type="number" 
+              className="admin-form-input" 
+              value={settings.lowStockThreshold || 10} 
+              onChange={e => setSettings({...settings, lowStockThreshold: Number(e.target.value)})}
+            />
           </div>
         </div>
       </div>

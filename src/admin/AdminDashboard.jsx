@@ -1,27 +1,42 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../store';
+import { getDashboardStats } from '../api/admin';
 
 export default function AdminDashboard() {
   const store = useStore();
-  const { products, categories: categoryTree, orders } = store;
+  const { products } = store;
+  
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalOrders: 0,
+    totalCustomers: 0,
+    totalRevenue: 0,
+    inStock: 0,
+    outOfStock: 0,
+    pendingOrders: 0,
+    categories: 0
+  });
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const stats = useMemo(() => {
-    const totalProducts = products.length;
-    const inStock = products.filter(p => p.inStock).length;
-    const outOfStock = totalProducts - inStock;
-    const totalValue = products.reduce((s, p) => s + p.price, 0);
-    const categories = categoryTree.length;
-    return { totalProducts, inStock, outOfStock, totalValue, categories };
-  }, [products, categoryTree]);
-
-  // Live orders
-  const recentOrders = orders.slice(0, 5);
+  useEffect(() => {
+    getDashboardStats().then(data => {
+      setStats(data.stats);
+      setRecentOrders(data.recentOrders);
+      setLoading(false);
+    }).catch(err => {
+      console.error('Failed to load dashboard stats', err);
+      setLoading(false);
+    });
+  }, []);
 
   const statusBadge = (s) => {
-    const map = { Completed: 'active', Processing: 'info', Shipped: 'primary', Pending: 'warning' };
-    return <span className={`admin-badge admin-badge--${map[s] || 'inactive'}`}>{s}</span>;
+    const map = { delivered: 'active', processing: 'info', shipped: 'primary', pending: 'warning', cancelled: 'danger' };
+    return <span className={`admin-badge admin-badge--${map[s?.toLowerCase()] || 'inactive'}`} style={{ textTransform: 'capitalize' }}>{s}</span>;
   };
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading dashboard...</div>;
 
   return (
     <>
@@ -57,7 +72,7 @@ export default function AdminDashboard() {
           </div>
           <div className="admin-stat-card__info">
             <div className="admin-stat-card__label">Total Orders</div>
-            <div className="admin-stat-card__value">{orders.length}</div>
+            <div className="admin-stat-card__value">{stats.totalOrders}</div>
           </div>
         </div>
         <div className="admin-stat-card">
@@ -66,7 +81,7 @@ export default function AdminDashboard() {
           </div>
           <div className="admin-stat-card__info">
             <div className="admin-stat-card__label">Total Revenue</div>
-            <div className="admin-stat-card__value">₹{stats.totalValue.toLocaleString()}</div>
+            <div className="admin-stat-card__value">₹{stats.totalRevenue.toLocaleString()}</div>
           </div>
         </div>
         <div className="admin-stat-card">
@@ -92,8 +107,8 @@ export default function AdminDashboard() {
             <span className="material-symbols-outlined">sell</span>
           </div>
           <div className="admin-stat-card__info">
-            <div className="admin-stat-card__label">Active Offers</div>
-            <div className="admin-stat-card__value">3</div>
+            <div className="admin-stat-card__label">Pending Orders</div>
+            <div className="admin-stat-card__value">{stats.pendingOrders}</div>
           </div>
         </div>
       </div>
@@ -117,12 +132,12 @@ export default function AdminDashboard() {
             </thead>
             <tbody>
               {recentOrders.map(o => (
-                <tr key={o.id}>
-                  <td style={{ fontWeight: 600 }}>{o.id}</td>
-                  <td>{o.customer}</td>
+                <tr key={o._id}>
+                  <td style={{ fontWeight: 600 }}>{o.orderId}</td>
+                  <td>{o.user?.name || 'Guest'}</td>
                   <td>₹{o.total.toLocaleString()}</td>
                   <td>{statusBadge(o.status)}</td>
-                  <td style={{ color: '#64748b' }}>{o.date}</td>
+                  <td style={{ color: '#64748b' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>

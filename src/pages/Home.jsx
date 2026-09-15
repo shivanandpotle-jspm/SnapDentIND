@@ -9,7 +9,8 @@ export default function Home() {
   const featured = products.slice(0, 2);
 
   return (
-    <main className="animate-fade-in-up">
+    <>
+      <main className="animate-fade-in-up">
       {/* Hero */}
       <section className="hero section-gap container-max">
         <div className="hero__grid">
@@ -165,5 +166,6 @@ export default function Home() {
         </div>
       </section>
     </main>
+    </>
   );
 }

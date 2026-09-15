@@ -1,15 +1,18 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
 
 import Home from './pages/Home';
 import Shop from './pages/Shop';
+import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import MyOrders from './pages/MyOrders';
 import Shipping from './pages/Shipping';
 import Payment from './pages/Payment';
 import OrderSuccess from './pages/OrderSuccess';
@@ -22,6 +25,7 @@ import AdminInventory from './admin/AdminInventory';
 import AdminDiscounts from './admin/AdminDiscounts';
 import AdminOrders from './admin/AdminOrders';
 import AdminCustomers from './admin/AdminCustomers';
+import AdminMessages from './admin/AdminMessages';
 import AdminCategories from './admin/AdminCategories';
 import AdminSettings from './admin/AdminSettings';
 import AdminProfile from './admin/AdminProfile';
@@ -37,11 +41,13 @@ function AppContent() {
         {/* Customer Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/profile" element={<MyOrders />} />
         <Route path="/shipping" element={<Shipping />} />
         <Route path="/payment" element={<Payment />} />
         <Route path="/order-success" element={<OrderSuccess />} />
@@ -55,6 +61,7 @@ function AppContent() {
           <Route path="discounts" element={<AdminDiscounts />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="customers" element={<AdminCustomers />} />
+          <Route path="messages" element={<AdminMessages />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="profile" element={<AdminProfile />} />
@@ -68,9 +75,11 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   );
 }
 

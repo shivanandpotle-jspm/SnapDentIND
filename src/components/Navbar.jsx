@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useStore } from '../store';
 import './Navbar.css';
 
@@ -10,6 +11,8 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const cartItemCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
 
 
@@ -89,9 +92,37 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-              <Link to="/login" className="navbar__icon-btn navbar__icon-btn--desktop" aria-label="Account">
-                <span className="material-symbols-outlined">account_circle</span>
-              </Link>
+              {isAuthenticated ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Link
+                    to="/profile"
+                    className="navbar__icon-btn navbar__icon-btn--desktop"
+                    aria-label="Account"
+                    onClick={() => setCartDropdownOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, width: 'auto', padding: '0 16px', borderRadius: '22px', textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <span className="material-symbols-outlined">account_circle</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name?.split(' ')[0]}</span>
+                  </Link>
+                  {user?.role === 'admin' && (
+                    <Link to="/admin" className="navbar__icon-btn navbar__icon-btn--desktop" aria-label="Admin" title="Admin Dashboard">
+                      <span className="material-symbols-outlined">admin_panel_settings</span>
+                    </Link>
+                  )}
+                  <button
+                    className="navbar__icon-btn navbar__icon-btn--desktop"
+                    aria-label="Logout"
+                    title="Logout"
+                    onClick={() => { logout(); navigate('/'); }}
+                  >
+                    <span className="material-symbols-outlined">logout</span>
+                  </button>
+                </div>
+              ) : (
+                <Link to="/login" className="navbar__icon-btn navbar__icon-btn--desktop" aria-label="Account">
+                  <span className="material-symbols-outlined">account_circle</span>
+                </Link>
+              )}
               <button
                 className="navbar__hamburger"
                 onClick={() => setMobileOpen(true)}
@@ -117,6 +148,17 @@ export default function Navbar() {
           <Link to="/shop" className="mobile-menu__link">Shop</Link>
           <Link to="/about" className="mobile-menu__link">About Us</Link>
           <Link to="/contact" className="mobile-menu__link">Contact Us</Link>
+          {isAuthenticated ? (
+            <>
+              <Link to="/cart" className="mobile-menu__link">My Cart</Link>
+              <button className="mobile-menu__link" style={{ background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', width: '100%', padding: 'inherit', font: 'inherit', color: 'inherit' }} onClick={() => { logout(); navigate('/'); }}>Logout</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="mobile-menu__link">Sign In</Link>
+              <Link to="/signup" className="mobile-menu__link">Sign Up</Link>
+            </>
+          )}
         </nav>
       </div>
 

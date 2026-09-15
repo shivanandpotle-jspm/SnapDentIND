@@ -1,54 +1,73 @@
 import { useState, useEffect } from 'react';
-import { useStore, updateStore } from '../store';
-import { products } from '../data/products';
+import { getAllOrders, updateOrderStatus as updateOrderStatusApi } from '../api/orders';
 
-const DEMO_ORDERS = [
-  { id: 'ORD-1042', customer: 'Dr. Anil Sharma', email: 'anil@clinic.com', items: [{ ...products[0], qty: 2 }, { ...products[1], qty: 1 }], total: 2150, status: 'Completed', date: '2026-08-22', address: 'Mumbai, MH' },
-  { id: 'ORD-1041', customer: 'Dr. Priya Desai', email: 'priya@dental.co', items: [{ ...products[5], qty: 3 }], total: 165, status: 'Processing', date: '2026-08-22', address: 'Delhi, DL' },
-  { id: 'ORD-1040', customer: 'HealthDent Clinic', email: 'info@healthdent.com', items: [{ ...products[10], qty: 1 }, { ...products[8], qty: 1 }], total: 1630, status: 'Shipped', date: '2026-08-21', address: 'Bangalore, KA' },
-  { id: 'ORD-1039', customer: 'Dr. Rahul Verma', email: 'rahul@smile.in', items: [{ ...products[2], qty: 5 }], total: 325, status: 'Pending', date: '2026-08-21', address: 'Chennai, TN' },
-  { id: 'ORD-1038', customer: 'SmileCare Hospital', email: 'orders@smilecare.org', items: [{ ...products[3], qty: 2 }, { ...products[7], qty: 1 }], total: 580, status: 'Completed', date: '2026-08-20', address: 'Pune, MH' },
-  { id: 'ORD-1037', customer: 'Dr. Kavita Nair', email: 'kavita@dentalplus.com', items: [{ ...products[12], qty: 1 }], total: 680, status: 'Cancelled', date: '2026-08-19', address: 'Hyderabad, TS' },
-  { id: 'ORD-1036', customer: 'City Dental Lab', email: 'lab@citydental.in', items: [{ ...products[15], qty: 4 }], total: 580, status: 'Completed', date: '2026-08-18', address: 'Ahmedabad, GJ' },
-];
-
-const STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'];
+const STATUS_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 export default function AdminOrders() {
-  const store = useStore();
-  
-  // Initialize from store.orders; if empty, use DEMO_ORDERS and populate store
-  useEffect(() => {
-    if (store.orders.length === 0) {
-      updateStore('orders', DEMO_ORDERS);
-    }
-  }, []);
-
-  const orders = store.orders.length > 0 ? store.orders : DEMO_ORDERS;
+  const [orders, setOrders] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [viewOrder, setViewOrder] = useState(null);
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllOrders();
+      const mappedOrders = data.orders.map(o => ({
+        id: o.orderId,
+        _id: o._id,
+        customer: o.user?.name || o.shippingAddress?.firstName + ' ' + o.shippingAddress?.lastName,
+        email: o.user?.email || 'N/A',
+        items: o.items,
+        total: o.total,
+        status: o.status,
+        date: new Date(o.createdAt).toLocaleDateString(),
+        address: o.shippingAddress ? `${o.shippingAddress.city}, ${o.shippingAddress.state}` : 'N/A'
+      }));
+      setOrders(mappedOrders);
+    } catch (err) {
+      showToast('Failed to load orders', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = orders.filter(o => {
     const matchSearch = !search || o.id.toLowerCase().includes(search.toLowerCase()) || o.customer.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'All' || o.status === statusFilter;
+    const matchStatus = statusFilter === 'All' || o.status === statusFilter.toLowerCase();
     return matchSearch && matchStatus;
   });
 
-  const updateStatus = (orderId, newStatus) => {
-    const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
-    updateStore('orders', updatedOrders);
-    if (viewOrder?.id === orderId) setViewOrder(prev => ({ ...prev, status: newStatus }));
-    showToast(`Order ${orderId} → ${newStatus}`, 'success');
+  const updateStatus = async (orderId, newStatus) => {
+    try {
+      const orderToUpdate = orders.find(o => o.id === orderId);
+      await updateOrderStatusApi(orderToUpdate._id, newStatus.toLowerCase());
+      
+      const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus.toLowerCase() } : o);
+      setOrders(updatedOrders);
+      if (viewOrder?.id === orderId) setViewOrder(prev => ({ ...prev, status: newStatus.toLowerCase() }));
+      showToast(`Order ${orderId} → ${newStatus}`, 'success');
+    } catch (err) {
+      showToast('Failed to update status', 'error');
+    }
   };
 
   const showToast = (msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
   const statusCls = (s) => {
-    const m = { Completed: 'active', Processing: 'info', Shipped: 'primary', Pending: 'warning', Cancelled: 'danger' };
+    const m = { delivered: 'active', processing: 'info', shipped: 'primary', pending: 'warning', cancelled: 'danger' };
     return m[s] || 'inactive';
   };
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: 'center' }}>Loading orders...</div>;
+  }
 
   // Order Detail View
   if (viewOrder) {
@@ -78,7 +97,7 @@ export default function AdminOrders() {
                       <tr key={i}>
                         <td>
                           <div className="admin-product-cell">
-                            <img src={item.image} alt={item.name} className="admin-product-thumb" />
+                            {item.image ? <img src={item.image} alt={item.name} className="admin-product-thumb" /> : <div className="admin-product-thumb" style={{ background: '#eee' }} />}
                             <div className="admin-product-cell__name">{item.name}</div>
                           </div>
                         </td>
@@ -100,13 +119,13 @@ export default function AdminOrders() {
             <div className="admin-form-card">
               <h3>Order Status</h3>
               <div style={{ marginBottom: 16 }}>
-                <span className={`admin-badge admin-badge--${statusCls(viewOrder.status)}`} style={{ fontSize: 14, padding: '6px 14px' }}>
+                <span className={`admin-badge admin-badge--${statusCls(viewOrder.status)}`} style={{ fontSize: 14, padding: '6px 14px', textTransform: 'capitalize' }}>
                   {viewOrder.status}
                 </span>
               </div>
               <div className="admin-form-group">
                 <label className="admin-form-label">Update Status</label>
-                <select className="admin-form-select" value={viewOrder.status} onChange={e => updateStatus(viewOrder.id, e.target.value)}>
+                <select className="admin-form-select" value={viewOrder.status} onChange={e => updateStatus(viewOrder.id, e.target.value)} style={{ textTransform: 'capitalize' }}>
                   {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
@@ -150,7 +169,7 @@ export default function AdminOrders() {
 
       <div className="admin-tabs">
         {['All', ...STATUS_OPTIONS].map(s => (
-          <button key={s} className={`admin-tab ${statusFilter === s ? 'admin-tab--active' : ''}`} onClick={() => setStatusFilter(s)}>
+          <button key={s} className={`admin-tab ${statusFilter.toLowerCase() === s.toLowerCase() ? 'admin-tab--active' : ''}`} onClick={() => setStatusFilter(s)} style={{ textTransform: 'capitalize' }}>
             {s} {s !== 'All' && `(${orders.filter(o => o.status === s).length})`}
           </button>
         ))}
@@ -199,7 +218,7 @@ export default function AdminOrders() {
                   <td>
                     <select
                       className="admin-form-select"
-                      style={{ width: 'auto', padding: '4px 8px', fontSize: 12, height: 30, fontWeight: 600 }}
+                      style={{ width: 'auto', padding: '4px 8px', fontSize: 12, height: 30, fontWeight: 600, textTransform: 'capitalize' }}
                       value={o.status}
                       onChange={e => updateStatus(o.id, e.target.value)}
                     >

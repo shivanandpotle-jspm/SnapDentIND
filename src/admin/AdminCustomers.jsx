@@ -1,56 +1,45 @@
-import { useState, useMemo } from 'react';
-
-// Simulated orders data to derive customers from
-const DEMO_ORDERS = [
-  { id: 'ORD-1042', customerName: 'Dr. Anil Sharma', customerEmail: 'anil@clinic.com', total: 2150 },
-  { id: 'ORD-1041', customerName: 'Dr. Priya Desai', customerEmail: 'priya@dental.co', total: 165 },
-  { id: 'ORD-1040', customerName: 'HealthDent Clinic', customerEmail: 'info@healthdent.com', total: 1630 },
-  { id: 'ORD-1039', customerName: 'Dr. Rahul Verma', customerEmail: 'rahul@smile.in', total: 325 },
-  { id: 'ORD-1038', customerName: 'SmileCare Hospital', customerEmail: 'orders@smilecare.org', total: 580 },
-  { id: 'ORD-1037', customerName: 'Dr. Kavita Nair', customerEmail: 'kavita@dentalplus.com', total: 680 },
-  { id: 'ORD-1036', customerName: 'City Dental Lab', customerEmail: 'lab@citydental.in', total: 580 },
-  { id: 'ORD-1035', customerName: 'Dr. Anil Sharma', customerEmail: 'anil@clinic.com', total: 1200 }, // Repeat customer
-];
+import { useState, useEffect } from 'react';
+import { getCustomers } from '../api/admin';
 
 export default function AdminCustomers() {
+  const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
   const [viewCustomer, setViewCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Derive customers directly from orders to fulfill "fetched directly when an user buy any product"
-  const customersList = useMemo(() => {
-    const custMap = {};
-    DEMO_ORDERS.forEach(order => {
-      if (!custMap[order.customerEmail]) {
-        custMap[order.customerEmail] = {
-          id: `CUST-${Math.abs(order.customerEmail.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a }, 0)).toString().substring(0, 4)}`,
-          name: order.customerName,
-          email: order.customerEmail,
-          orders: 0,
-          totalSpent: 0,
-          status: 'Active'
-        };
-      }
-      custMap[order.customerEmail].orders += 1;
-      custMap[order.customerEmail].totalSpent += order.total;
-    });
-    return Object.values(custMap);
+  useEffect(() => {
+    fetchCustomers();
   }, []);
 
-  const filtered = customersList.filter(c => 
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const data = await getCustomers();
+      setCustomers(data.customers);
+    } catch (err) {
+      console.error('Failed to load customers', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = customers.filter(c => 
     !search || 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.email.toLowerCase().includes(search.toLowerCase()) ||
-    c.id.toLowerCase().includes(search.toLowerCase())
+    c.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: 'center' }}>Loading customers...</div>;
+  }
 
   return (
     <>
       <div className="admin-page-header">
         <div>
           <h1>Customers</h1>
-          <p>Customer data is automatically generated from completed orders.</p>
+          <p>Customer data is automatically generated from orders.</p>
         </div>
-        {/* Add Customer button removed as per requirements */}
       </div>
 
       <div className="admin-table-wrap animate-fade-in-up">
@@ -70,19 +59,18 @@ export default function AdminCustomers() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Customer ID</th>
                 <th>Name / Clinic</th>
                 <th>Email</th>
                 <th>Total Orders</th>
                 <th>Lifetime Value</th>
-                <th>Status</th>
+                <th>Joined</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={6}>
                     <div className="admin-empty-state">
                       <span className="material-symbols-outlined">search_off</span>
                       <h3>No customers found</h3>
@@ -91,17 +79,12 @@ export default function AdminCustomers() {
                   </td>
                 </tr>
               ) : filtered.map(c => (
-                <tr key={c.id}>
-                  <td style={{ fontWeight: 600 }}>{c.id}</td>
+                <tr key={c._id}>
                   <td style={{ fontWeight: 600, color: 'var(--admin-text)' }}>{c.name}</td>
                   <td style={{ color: 'var(--admin-text-muted)' }}>{c.email}</td>
-                  <td>{c.orders}</td>
+                  <td>{c.orderCount}</td>
                   <td style={{ fontWeight: 700, color: 'var(--admin-accent)' }}>₹{c.totalSpent.toLocaleString()}</td>
-                  <td>
-                    <span className={`admin-badge ${c.status === 'Active' ? 'admin-badge--active' : 'admin-badge--inactive'}`}>
-                      {c.status}
-                    </span>
-                  </td>
+                  <td style={{ color: 'var(--admin-text-muted)', fontSize: 13 }}>{new Date(c.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <button className="admin-btn admin-btn--icon" title="View details" onClick={() => setViewCustomer(c)}>
@@ -141,7 +124,7 @@ export default function AdminCustomers() {
                 <div className="admin-stat-card" style={{ padding: 16 }}>
                   <div className="admin-stat-card__info">
                     <div className="admin-stat-card__label">Total Orders</div>
-                    <div className="admin-stat-card__value" style={{ fontSize: 24 }}>{viewCustomer.orders}</div>
+                    <div className="admin-stat-card__value" style={{ fontSize: 24 }}>{viewCustomer.orderCount}</div>
                   </div>
                 </div>
                 <div className="admin-stat-card" style={{ padding: 16 }}>
@@ -154,10 +137,25 @@ export default function AdminCustomers() {
                 </div>
               </div>
 
-              <h4 style={{ margin: '0 0 12px' }}>Recent Activity</h4>
-              <p style={{ fontSize: 13, color: 'var(--admin-text-secondary)', margin: 0 }}>
-                This customer's data is automatically aggregated from their purchase history.
-              </p>
+              <h4 style={{ margin: '0 0 12px' }}>Account Info</h4>
+              <div style={{ fontSize: 13, color: 'var(--admin-text-secondary)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Member Since</span>
+                  <strong>{new Date(viewCustomer.createdAt).toLocaleDateString()}</strong>
+                </div>
+                {viewCustomer.lastOrder && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Last Order</span>
+                    <strong>{new Date(viewCustomer.lastOrder).toLocaleDateString()}</strong>
+                  </div>
+                )}
+                {viewCustomer.phone && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Phone</span>
+                    <strong>{viewCustomer.phone}</strong>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="admin-modal__footer">
               <button className="admin-btn admin-btn--primary" onClick={() => setViewCustomer(null)}>Done</button>

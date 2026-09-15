@@ -1,17 +1,35 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { registerUser } from '../api/auth';
 import './Auth.css';
 
 export default function Signup() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     if (formData.password !== formData.confirm) {
-      alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
-    alert('Registration functionality would connect to a backend.');
+
+    setLoading(true);
+    try {
+      const data = await registerUser(formData.name, formData.email, formData.password);
+      login(data.token, data.user);
+      navigate('/');
+    } catch (err) {
+      setError(err.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -21,6 +39,13 @@ export default function Signup() {
           <h1 className="auth-title">Create Account</h1>
           <p className="auth-subtitle">Join SnapDent India for exclusive access</p>
         </div>
+
+        {error && (
+          <div className="auth-field-group" style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', marginBottom: '20px', fontWeight: 600, border: '1px solid rgba(220,38,38,0.2)' }}>
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="auth-field-group">
             <label className="auth-label">Full Name</label>
@@ -67,8 +92,8 @@ export default function Signup() {
             />
           </div>
           <div className="auth-field-group">
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '52px', marginTop: '10px' }}>
-              Create Account
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '52px', marginTop: '10px' }} disabled={loading}>
+              {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </div>
         </form>

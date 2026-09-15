@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { section: 'Sales & Users' },
   { label: 'Orders', icon: 'receipt_long', path: '/admin/orders' },
   { label: 'Customers', icon: 'group', path: '/admin/customers' },
+  { label: 'Messages', icon: 'inbox', path: '/admin/messages' },
   { section: 'System' },
   { label: 'Categories', icon: 'category', path: '/admin/categories' },
   { label: 'Settings', icon: 'settings', path: '/admin/settings' },
@@ -37,14 +38,12 @@ export default function AdminLayout() {
   )?.label || 'Admin';
 
   return (
-    <div className="admin-shell">
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'admin-sidebar--open' : ''}`}>
+    <>
+      <div className="admin-shell">
+        {/* Sidebar */}
+        <aside className={`admin-sidebar ${sidebarOpen ? 'admin-sidebar--open' : ''}`}>
         <div className="admin-sidebar__brand">
           <img src={logos.main} alt="SnapDent" />
-          <div className="admin-sidebar__brand-text">
-            Snap<span>Dent</span> Admin
-          </div>
         </div>
         <nav className="admin-sidebar__nav">
           {NAV_ITEMS.map((item, i) =>
@@ -109,7 +108,8 @@ export default function AdminLayout() {
         <main className="admin-content">
           <Outlet />
         </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
