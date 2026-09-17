@@ -14,19 +14,40 @@ let driveClient = null;
 const getClient = () => {
   if (driveClient) return driveClient;
 
-  const keyPath = path.resolve(
-    process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json'
-  );
+  // Check for credentials in an environment variable string first (ideal for Render/Vercel)
+  const credentialsString = process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS;
+  
+  let authOptions;
 
-  if (!fs.existsSync(keyPath)) {
-    console.warn('⚠ Google Drive service account key not found. Image uploads will be disabled.');
-    return null;
+  if (credentialsString) {
+    try {
+      const credentials = JSON.parse(credentialsString);
+      authOptions = {
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/drive.file'],
+      };
+    } catch (err) {
+      console.error('⚠ GOOGLE_SERVICE_ACCOUNT_CREDENTIALS is not valid JSON.');
+      return null;
+    }
+  } else {
+    // Fallback to a local key file
+    const keyPath = path.resolve(
+      process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json'
+    );
+
+    if (!fs.existsSync(keyPath)) {
+      console.warn('⚠ Google Drive service account key not found. Image uploads will be disabled.');
+      return null;
+    }
+    
+    authOptions = {
+      keyFile: keyPath,
+      scopes: ['https://www.googleapis.com/auth/drive.file'],
+    };
   }
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: keyPath,
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
-  });
+  const auth = new google.auth.GoogleAuth(authOptions);
 
   driveClient = google.drive({ version: 'v3', auth });
   console.log('✓ Google Drive API connected');

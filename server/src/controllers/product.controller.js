@@ -1,6 +1,7 @@
 import Product from '../models/Product.js';
 import fs from 'fs';
 import path from 'path';
+import { uploadToDrive, deleteFromDrive } from '../config/gdrive.js';
 
 /**
  * GET /api/products — List products with search, filter, pagination, sort
@@ -146,9 +147,11 @@ export const deleteProduct = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Product not found.' });
     }
 
-    // Delete images from local storage
+    // Delete images from Google Drive and local storage fallback
     for (const img of product.images) {
-      if (img.url && img.url.includes('/uploads/')) {
+      if (img.driveFileId) {
+        await deleteFromDrive(img.driveFileId);
+      } else if (img.url && img.url.includes('/uploads/')) {
         const filename = img.url.split('/uploads/')[1];
         const filepath = path.resolve('public/uploads', filename);
         if (fs.existsSync(filepath)) {
@@ -180,10 +183,9 @@ export const uploadProductImages = async (req, res, next) => {
     }
 
     const uploadedImages = [];
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
     for (const file of req.files) {
-      const url = `${baseUrl}/uploads/${file.filename}`;
-      uploadedImages.push({ url, driveFileId: '' });
+      const { url, driveFileId } = await uploadToDrive(file.buffer, file.originalname, file.mimetype);
+      uploadedImages.push({ url, driveFileId });
     }
 
     product.images.push(...uploadedImages);

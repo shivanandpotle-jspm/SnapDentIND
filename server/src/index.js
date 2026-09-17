@@ -4,8 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { rateLimit } from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
-import hpp from 'hpp';
+
+
 import connectDB from './config/db.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
@@ -54,11 +54,9 @@ app.use('/api/auth/forgot-password', authLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Data sanitization against NoSQL query injection
-app.use(mongoSanitize());
 
-// Prevent HTTP Parameter Pollution
-app.use(hpp());
+
+
 
 // Logging
 if (process.env.NODE_ENV !== 'production') {
@@ -74,12 +72,17 @@ app.get('/api/health', (req, res) => {
 });
 
 import { upload } from './middleware/upload.js';
+import { uploadToDrive } from './config/gdrive.js';
 
 // Generic Upload Route
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/upload', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  res.json({ success: true, url: `${baseUrl}/uploads/${req.file.filename}` });
+  try {
+    const { url, driveFileId } = await uploadToDrive(req.file.buffer, req.file.originalname, req.file.mimetype);
+    res.json({ success: true, url, driveFileId });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // API Routes
