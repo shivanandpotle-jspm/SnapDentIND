@@ -100,7 +100,7 @@ productSchema.pre('save', function (next) {
 
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1, inStock: 1 });
-productSchema.index({ slug: 1 });
+
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

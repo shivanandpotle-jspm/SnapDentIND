@@ -91,7 +91,7 @@ orderSchema.pre('save', function (next) {
   next();
 });
 
-orderSchema.index({ orderId: 1 });
+
 orderSchema.index({ status: 1, createdAt: -1 });
 
 const Order = mongoose.model('Order', orderSchema);
