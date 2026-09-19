@@ -65,6 +65,17 @@ export default function AdminOrders() {
     return m[s] || 'inactive';
   };
 
+  const getStatusStyle = (s) => {
+    switch (s) {
+      case 'pending': return { backgroundColor: '#fffbeb', color: '#b45309' }; // faint amber
+      case 'processing': return { backgroundColor: '#eff6ff', color: '#1d4ed8' }; // faint blue
+      case 'shipped': return { backgroundColor: '#f5f3ff', color: '#6d28d9' }; // faint purple
+      case 'delivered': return { backgroundColor: '#f0fdf4', color: '#15803d' }; // faint green
+      case 'cancelled': return { backgroundColor: '#fef2f2', color: '#b91c1c' }; // faint red
+      default: return { backgroundColor: '#f8fafc', color: '#334155' };
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center' }}>Loading orders...</div>;
   }
@@ -133,8 +144,8 @@ export default function AdminOrders() {
               </div>
               <div className="admin-form-group">
                 <label className="admin-form-label">Update Status</label>
-                <select className="admin-form-select" value={viewOrder.status} onChange={e => updateStatus(viewOrder.id, e.target.value)} style={{ textTransform: 'capitalize' }}>
-                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                <select className="admin-form-select" value={viewOrder.status} onChange={e => updateStatus(viewOrder.id, e.target.value)} style={{ textTransform: 'capitalize', fontWeight: 600, ...getStatusStyle(viewOrder.status) }}>
+                  {STATUS_OPTIONS.map(s => <option key={s} value={s} style={getStatusStyle(s)}>{s}</option>)}
                 </select>
               </div>
             </div>
@@ -226,11 +237,11 @@ export default function AdminOrders() {
                   <td>
                     <select
                       className="admin-form-select"
-                      style={{ width: 'auto', padding: '4px 8px', fontSize: 12, height: 30, fontWeight: 600, textTransform: 'capitalize' }}
+                      style={{ width: 'auto', padding: '4px 8px', fontSize: 12, height: 30, fontWeight: 700, textTransform: 'capitalize', border: 'none', ...getStatusStyle(o.status) }}
                       value={o.status}
                       onChange={e => updateStatus(o.id, e.target.value)}
                     >
-                      {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                      {STATUS_OPTIONS.map(s => <option key={s} value={s} style={{ fontWeight: 600, ...getStatusStyle(s) }}>{s}</option>)}
                     </select>
                   </td>
                   <td>
