@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getMyOrders, verifyPayment } from '../api/orders';
+import { getMyOrders, verifyPayment, downloadInvoice } from '../api/orders';
 import './MyOrders.css';
 
 const loadRazorpay = () => {
@@ -110,6 +110,22 @@ export default function MyOrders() {
     return idx === -1 ? 0 : idx;
   };
 
+  const handleDownloadInvoice = async (orderId) => {
+    try {
+      const blob = await downloadInvoice(orderId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (err) {
+      alert('Failed to download invoice.');
+    }
+  };
+
   // ─── Loading State ──────────────────────
   if (loading) {
     return (
@@ -142,6 +158,14 @@ export default function MyOrders() {
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button 
+                className="btn btn-outline" 
+                onClick={() => handleDownloadInvoice(viewOrder._id)} 
+                style={{ padding: '8px 16px', fontSize: '14px', height: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>download</span>
+                Invoice
+              </button>
               {viewOrder.status === 'pending' && viewOrder.paymentMethod !== 'cod' && viewOrder.razorpayOrderId && (
                 <button className="btn btn-primary" onClick={() => handleRetryPayment(viewOrder)} style={{ padding: '8px 16px', fontSize: '14px', height: 'auto' }}>
                   Complete Payment

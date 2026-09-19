@@ -44,4 +44,16 @@ export const put = (endpoint, body) => api(endpoint, { method: 'PUT', body: JSON
 export const del = (endpoint) => api(endpoint, { method: 'DELETE' });
 export const upload = (endpoint, formData) => api(endpoint, { method: 'POST', body: formData });
 
+export const getBlob = async (endpoint) => {
+  const token = localStorage.getItem('snapdent_token');
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'GET',
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
+  if (!response.ok) throw new Error('Download failed');
+  return response.blob();
+};
+
 export default api;
