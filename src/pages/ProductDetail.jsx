@@ -49,6 +49,12 @@ export default function ProductDetail() {
   }
 
   const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      alert('Please login first to add items to your cart.');
+      navigate('/login');
+      return;
+    }
+
     if (!product.inStock) return;
     if (mockSizes.length > 0 && mockSizes[0] !== 'Standard' && !selectedSize) {
       alert('Please select an option first.');
