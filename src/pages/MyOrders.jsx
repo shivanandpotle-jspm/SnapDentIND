@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMyOrders, verifyPayment, downloadInvoice } from '../api/orders';
+import { addProductReview } from '../api/products';
 import './MyOrders.css';
 
 const loadRazorpay = () => {
@@ -31,6 +32,11 @@ export default function MyOrders() {
   const [viewOrder, setViewOrder] = useState(null);
 
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
+
+  const [reviewModal, setReviewModal] = useState({ open: false, productId: null, productName: '' });
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -126,6 +132,56 @@ export default function MyOrders() {
     }
   };
 
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!rating || !comment) return alert('Please provide rating and comment');
+    setSubmittingReview(true);
+    try {
+      await addProductReview(reviewModal.productId, { rating, comment });
+      alert('Review submitted successfully!');
+      setReviewModal({ open: false, productId: null, productName: '' });
+      setRating(5);
+      setComment('');
+    } catch (err) {
+      alert(err.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const renderReviewModal = () => {
+    if (!reviewModal.open) return null;
+    return (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+        <div style={{ background: 'white', padding: 24, borderRadius: 12, width: '90%', maxWidth: 400 }}>
+          <h3 style={{ marginTop: 0 }}>Rate {reviewModal.productName}</h3>
+          <form onSubmit={handleSubmitReview}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Rating</label>
+              <select value={rating} onChange={e => setRating(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }}>
+                <option value="5">5 - Excellent</option>
+                <option value="4">4 - Good</option>
+                <option value="3">3 - Average</option>
+                <option value="2">2 - Poor</option>
+                <option value="1">1 - Terrible</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Review Comment</label>
+              <textarea value={comment} onChange={e => setComment(e.target.value)} required rows="4" style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc' }} placeholder="Write your review here..."></textarea>
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button type="button" className="btn btn-outline" onClick={() => setReviewModal({ open: false })}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={submittingReview}>
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   // ─── Loading State ──────────────────────
   if (loading) {
     return (
@@ -143,6 +199,7 @@ export default function MyOrders() {
     const currentStep = getStepIndex(viewOrder.status);
 
     return (
+      <>
       <main className="my-orders-page container-max section-gap">
         <div className="order-detail-page">
           <button className="btn-back" onClick={() => setViewOrder(null)}>
@@ -214,6 +271,15 @@ export default function MyOrders() {
                       <h4>{item.name}</h4>
                       {item.variant && <p className="detail-item-qty" style={{ color: 'var(--primary)' }}>Option: {item.variant}</p>}
                       <p className="detail-item-qty">Qty: {item.qty} × ₹{item.price.toLocaleString()}</p>
+                      {viewOrder.status === 'delivered' && (
+                        <button 
+                          className="btn btn-outline btn-sm" 
+                          style={{ marginTop: 8, padding: '4px 12px', fontSize: 12 }}
+                          onClick={() => setReviewModal({ open: true, productId: item.id, productName: item.name })}
+                        >
+                          Rate Product
+                        </button>
+                      )}
                     </div>
                     <span className="detail-item-price">₹{(item.price * item.qty).toLocaleString()}</span>
                   </div>
@@ -263,11 +329,14 @@ export default function MyOrders() {
           </div>
         </div>
       </main>
+      {renderReviewModal()}
+      </>
     );
   }
 
   // ─── Orders List View ───────────────────
   return (
+    <>
     <main className="my-orders-page container-max section-gap animate-fade-in-up">
       {/* Profile Hero */}
       <div className="profile-hero">
@@ -341,5 +410,7 @@ export default function MyOrders() {
         </div>
       )}
     </main>
+    {renderReviewModal()}
+    </>
   );
 }

@@ -37,6 +37,13 @@ export default function ProductCard({ product }) {
         <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <h3 className="product-card__name" title={product.name}>{product.name}</h3>
         </Link>
+        {product.numReviews > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#f59e0b', marginTop: '4px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>star</span>
+            <span style={{ fontWeight: 600, color: 'var(--on-surface)' }}>{product.rating.toFixed(1)}</span>
+            <span style={{ color: 'var(--on-surface-variant)' }}>({product.numReviews})</span>
+          </div>
+        )}
         <p className="product-card__desc">{product.description}</p>
         <div className="product-card__footer">
           <div className="product-card__price-wrap">

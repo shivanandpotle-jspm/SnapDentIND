@@ -109,6 +109,13 @@ export default function ProductDetail() {
           </div>
           
           <h1 className="product-title">{product.name}</h1>
+          {product.numReviews > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', color: '#f59e0b', marginBottom: '12px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>star</span>
+              <span style={{ fontWeight: 600, color: 'var(--on-surface)' }}>{product.rating.toFixed(1)}</span>
+              <span style={{ color: 'var(--on-surface-variant)' }}>({product.numReviews} review{product.numReviews > 1 ? 's' : ''})</span>
+            </div>
+          )}
           <p className="product-price">₹{product.price.toFixed(2)}</p>
           <p className="product-short-desc">{product.description}</p>
           
@@ -194,6 +201,12 @@ export default function ProductDetail() {
           >
             Shipping & Returns
           </button>
+          <button 
+            className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reviews')}
+          >
+            Reviews ({product.numReviews || 0})
+          </button>
         </div>
         
         <div className="tab-content">
@@ -229,6 +242,35 @@ export default function ProductDetail() {
               <p><strong>Fast Dispatch:</strong> Orders placed before 2 PM are dispatched the same day.</p>
               <p><strong>Standard Delivery:</strong> 3-5 business days.</p>
               <p><strong>Returns:</strong> 30-day return policy for unopened items in original packaging. Sterile items cannot be returned if the seal is broken.</p>
+            </div>
+          )}
+          {activeTab === 'reviews' && (
+            <div className="tab-pane animate-fade-in-up">
+              <h3>Customer Reviews</h3>
+              {(!product.reviews || product.reviews.length === 0) ? (
+                <p>No reviews yet. Be the first to review this product after purchase!</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                  {product.reviews.map((r, i) => (
+                    <div key={i} style={{ padding: '16px', background: 'var(--surface-container-low)', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <strong style={{ color: 'var(--on-surface)' }}>{r.name}</strong>
+                        <div style={{ display: 'flex', color: '#f59e0b', fontSize: '14px' }}>
+                          {[...Array(5)].map((_, idx) => (
+                            <span key={idx} className="material-symbols-outlined" style={{ fontVariationSettings: `'FILL' ${idx < r.rating ? 1 : 0}` }}>
+                              star
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <p style={{ margin: 0, color: 'var(--on-surface-variant)' }}>{r.comment}</p>
+                      <span style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '8px', display: 'block' }}>
+                        {new Date(r.createdAt || Date.now()).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
