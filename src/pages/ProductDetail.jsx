@@ -55,18 +55,22 @@ export default function ProductDetail() {
       return;
     }
 
-    const existing = cart.find(item => String(item.id) === String(product.id));
+    const existing = cart.find(item => String(item.id) === String(product.id) && (item.variant || '') === selectedSize);
     let newCart;
     if (existing) {
-      newCart = cart.map(item => String(item.id) === String(product.id) ? { ...item, qty: item.qty + qty } : item);
+      newCart = cart.map(item => 
+        String(item.id) === String(product.id) && (item.variant || '') === selectedSize 
+          ? { ...item, qty: item.qty + qty } 
+          : item
+      );
     } else {
-      newCart = [...cart, { id: product.id, qty }];
+      newCart = [...cart, { id: product.id, cartItemId: Date.now().toString(), qty, variant: selectedSize }];
     }
     updateStore('cart', newCart);
 
     if (isAuthenticated) {
       try {
-        const data = await addToCart(product.id, qty);
+        const data = await addToCart(product.id, qty, selectedSize);
         updateStore('cart', data.cart);
       } catch (err) {
         console.error('Failed to add to backend cart', err);
@@ -103,6 +107,13 @@ export default function ProductDetail() {
           <p className="product-short-desc">{product.description}</p>
           
           <div className="product-divider"></div>
+
+          {product.stock > 0 && product.stock < 10 && (
+            <div style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626', padding: '12px 16px', borderRadius: '8px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="material-symbols-outlined">warning</span>
+              Only {product.stock} pcs available!
+            </div>
+          )}
 
           {mockSizes.length > 0 && mockSizes[0] !== 'Standard' && (
             <div className="product-options">

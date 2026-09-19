@@ -47,6 +47,7 @@ const userSchema = new mongoose.Schema({
   cart: [{
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     qty: { type: Number, default: 1, min: 1 },
+    variant: { type: String, default: '' },
   }],
   isVerified: {
     type: Boolean,

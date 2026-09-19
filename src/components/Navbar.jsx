@@ -9,7 +9,7 @@ export default function Navbar() {
   const { cart, logos } = store;
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const cartItemCount = cart.reduce((sum, item) => sum + item.qty, 0);
+  const cartItemCount = cart.length;
 
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
@@ -30,8 +30,7 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname === path;
 
-  // Cart dropdown state
-  const [cartDropdownOpen, setCartDropdownOpen] = useState(false);
+  // Cart dropdown state removed
 
   return (
     <>
@@ -72,10 +71,10 @@ export default function Navbar() {
 
             <div className="navbar__actions">
               <div className="navbar__cart-wrapper">
-                <button
+                <Link
+                  to="/cart"
                   className="navbar__icon-btn"
                   aria-label="Shopping Cart"
-                  onClick={() => setCartDropdownOpen(prev => !prev)}
                   style={{ position: 'relative' }}
                 >
                   <span className="material-symbols-outlined">shopping_cart_checkout</span>
@@ -84,13 +83,7 @@ export default function Navbar() {
                       {cartItemCount}
                     </span>
                   )}
-                </button>
-                {cartDropdownOpen && (
-                  <div className="navbar__cart-dropdown">
-                    <p>{cartItemCount > 0 ? `You have ${cartItemCount} items.` : 'Your cart is empty.'}</p>
-                    <Link to="/cart" onClick={() => setCartDropdownOpen(false)}>View Cart</Link>
-                  </div>
-                )}
+                </Link>
               </div>
               {isAuthenticated ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -98,7 +91,6 @@ export default function Navbar() {
                     to="/profile"
                     className="navbar__icon-btn navbar__icon-btn--desktop"
                     aria-label="Account"
-                    onClick={() => setCartDropdownOpen(false)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, width: 'auto', padding: '0 16px', borderRadius: '22px', textDecoration: 'none', color: 'inherit' }}
                   >
                     <span className="material-symbols-outlined">account_circle</span>

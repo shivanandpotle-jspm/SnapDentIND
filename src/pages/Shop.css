@@ -7,6 +7,18 @@
   padding-bottom: 80px;
 }
 
+/* Override container-max horizontal padding specifically for shop page to make it less aggressive */
+.shop-page.container-max {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+@media (min-width: 768px) {
+  .shop-page.container-max {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
 /* Shop Header */
 .shop-header {
   display: flex;
@@ -111,8 +123,8 @@
 
 /* Horizontal Top Category Nav */
 .shop-top-nav {
-  border-top: 1px solid var(--outline-variant);
-  border-bottom: 1px solid var(--outline-variant);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   margin-bottom: var(--space-xl);
   position: relative;
@@ -126,7 +138,7 @@
   justify-content: space-between;
   gap: clamp(8px, 1.5vw, 20px);
   flex-wrap: nowrap;
-  padding: 0 4px;
+  padding: 0 20px;
   position: relative;
   overflow: visible;
 }

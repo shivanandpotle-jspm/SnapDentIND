@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, updateStore } from '../store';
+import Papa from 'papaparse';
+import { bulkUploadProducts } from '../api/products';
 
 export default function AdminProducts() {
   const store = useStore();
@@ -146,6 +148,45 @@ export default function AdminProducts() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleBulkUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          setIsUploading(true);
+          const data = await bulkUploadProducts(results.data);
+          
+          if (data.success) {
+            showToast(`Successfully uploaded ${data.count} products! Refreshing...`, 'success');
+            // Optimistically reload to see changes (or we could fetch again)
+            setTimeout(() => window.location.reload(), 1500);
+          }
+        } catch (err) {
+          showToast('Failed to bulk upload products.', 'error');
+        } finally {
+          setIsUploading(false);
+          e.target.value = null; // reset input
+        }
+      },
+      error: () => showToast('Error parsing CSV file', 'error')
+    });
+  };
+
+  const downloadTemplate = () => {
+    const csvContent = 'name,category,subcategory,price,discountPrice,description,material,sku,stock,badge\nSample Drill,Restorative Dentistry,Burs,1200,,A high quality drill,Stainless Steel,SKU-DRILL-01,50,New\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'SnapDent_Products_Template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const catOptions = categoryTree.map(c => c.name);
   const subOptions = categoryTree.find(c => c.name === form.category)?.items || [];
 
@@ -266,12 +307,24 @@ export default function AdminProducts() {
                   <label className="admin-form-label">Upload Image</label>
                   <input 
                     type="file" 
+                    id="productImageUpload"
                     accept="image/*"
-                    className="admin-form-input" 
                     onChange={handleImageUpload} 
                     disabled={isUploading}
+                    style={{ display: 'none' }}
                   />
-                  {isUploading && <div className="admin-form-hint">Uploading...</div>}
+                  <label htmlFor="productImageUpload" style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    padding: '32px 16px', border: '2px dashed var(--admin-border)', borderRadius: '12px',
+                    cursor: isUploading ? 'not-allowed' : 'pointer', background: '#f8fafc',
+                    transition: 'all 0.2s', textAlign: 'center'
+                  }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 36, color: 'var(--admin-text-light)', marginBottom: 12 }}>cloud_upload</span>
+                    <span style={{ fontWeight: 600, color: 'var(--admin-text)', marginBottom: 4 }}>
+                      {isUploading ? 'Uploading...' : 'Click to upload image'}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--admin-text-light)' }}>SVG, PNG, JPG or GIF (max. 5MB)</span>
+                  </label>
                 </div>
                 {form.image && (
                   <div>
@@ -314,9 +367,32 @@ export default function AdminProducts() {
           <h1>Products</h1>
           <p>Manage your product catalog</p>
         </div>
-        <button className="admin-btn admin-btn--primary" onClick={openAdd}>
-          <span className="material-symbols-outlined">add</span> Add Product
-        </button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button 
+            className="admin-btn admin-btn--secondary" 
+            onClick={downloadTemplate}
+            title="Download CSV Template"
+          >
+            <span className="material-symbols-outlined">download</span> Template
+          </button>
+          
+          <input 
+            type="file" 
+            accept=".csv" 
+            id="csvUpload" 
+            style={{ display: 'none' }} 
+            onChange={handleBulkUpload} 
+            disabled={isUploading}
+          />
+          <label htmlFor="csvUpload" className="admin-btn admin-btn--secondary" style={{ margin: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="material-symbols-outlined">upload_file</span> 
+            {isUploading ? 'Uploading...' : 'Bulk Upload'}
+          </label>
+
+          <button className="admin-btn admin-btn--primary" onClick={openAdd}>
+            <span className="material-symbols-outlined">add</span> Add Product
+          </button>
+        </div>
       </div>
 
       <div className="admin-table-wrap">

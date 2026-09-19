@@ -3,9 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import CheckoutStepper from '../components/CheckoutStepper';
 import { useAuth } from '../context/AuthContext';
 import { getCart } from '../api/cart';
+import { useStore } from '../store';
 import './Checkout.css';
 
 export default function Shipping() {
+  const store = useStore();
+  const appliedDiscount = store.appliedDiscount;
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
@@ -52,7 +55,17 @@ export default function Shipping() {
 
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
   const shipping = subtotal > 500 ? 0 : 50;
-  const total = subtotal + shipping;
+  
+  let discountAmount = 0;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === 'percentage') {
+      discountAmount = subtotal * (appliedDiscount.value / 100);
+    } else {
+      discountAmount = appliedDiscount.value;
+    }
+  }
+
+  const total = Math.max(0, subtotal - discountAmount) + shipping;
 
   if (loading) return <div style={{ textAlign: 'center', padding: '100px 0' }}>Loading checkout...</div>;
 
@@ -122,6 +135,12 @@ export default function Shipping() {
         <aside className="checkout-summary card-elevated">
           <h3 className="summary-title">Order Summary</h3>
           <div className="summary-row"><span className="summary-label">Subtotal</span><span className="summary-value">₹{subtotal.toFixed(2)}</span></div>
+          {appliedDiscount && (
+            <div className="summary-row" style={{ color: 'var(--primary)' }}>
+              <span className="summary-label">Discount ({appliedDiscount.code})</span>
+              <span className="summary-value">-₹{discountAmount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="summary-row"><span className="summary-label">Shipping</span><span className="summary-value">
             {shipping === 0 ? <span className="free-shipping-text">Free</span> : `₹${shipping.toFixed(2)}`}
           </span></div>

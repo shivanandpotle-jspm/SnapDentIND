@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { logos } from '../data/products';
 import './Admin.css';
 
@@ -22,14 +23,15 @@ export default function AdminLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Simple auth check — in production, replace with real auth
-  const isAdmin = localStorage.getItem('snapdent_admin') === 'true';
-
+  const { isAdmin, isAuthenticated, loading } = useAuth();
+  
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  if (!isAdmin) {
+  if (loading) return null;
+
+  if (!isAuthenticated || !isAdmin) {
     return <Navigate to="/admin/login" replace />;
   }
 

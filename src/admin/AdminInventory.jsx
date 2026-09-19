@@ -1,21 +1,25 @@
-import { useState, useMemo } from 'react';
-import { products } from '../data/products';
+import { useState, useMemo, useEffect } from 'react';
+import { useStore, loadStoreFromAPI } from '../store';
+import { updateProduct } from '../api/products';
 
 export default function AdminInventory() {
+  const store = useStore();
+  const backendProducts = store.products || [];
+  
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [toast, setToast] = useState(null);
 
-  // Simulated stock data
-  const [stockMap, setStockMap] = useState(() => {
-    const map = {};
-    products.forEach(p => { map[p.id] = Math.floor(Math.random() * 80) + 5; });
-    // Manually set some low/out-of-stock for demo
-    map[105] = 3;
-    map[106] = 0;
-    map[302] = 2;
-    return map;
-  });
+  // Local state for stock values to allow typing without jitter
+  const [stockMap, setStockMap] = useState({});
+
+  useEffect(() => {
+    if (backendProducts.length > 0) {
+      const map = {};
+      backendProducts.forEach(p => { map[p.id] = p.stock || 0; });
+      setStockMap(map);
+    }
+  }, [backendProducts]);
 
   const getStockStatus = (qty) => {
     if (qty === 0) return { label: 'Out of Stock', cls: 'danger' };
@@ -24,10 +28,10 @@ export default function AdminInventory() {
   };
 
   const inventory = useMemo(() => {
-    let list = products.map(p => ({
+    let list = backendProducts.map(p => ({
       ...p,
-      stock: stockMap[p.id] || 0,
-      stockStatus: getStockStatus(stockMap[p.id] || 0)
+      stock: stockMap[p.id] ?? p.stock ?? 0,
+      stockStatus: getStockStatus(stockMap[p.id] ?? p.stock ?? 0)
     }));
 
     if (search) {
@@ -40,13 +44,23 @@ export default function AdminInventory() {
     if (filter === 'in') list = list.filter(p => p.stock > 5);
 
     return list;
-  }, [search, filter, stockMap]);
+  }, [search, filter, stockMap, backendProducts]);
+
+  const syncStockToBackend = async (id, newStock) => {
+    try {
+      await updateProduct(id, { stock: newStock });
+      showToast('Stock updated successfully', 'success');
+      loadStoreFromAPI(); // Refresh store from backend
+    } catch (err) {
+      showToast('Failed to update stock', 'error');
+    }
+  };
 
   const adjustStock = (id, delta) => {
-    setStockMap(prev => ({
-      ...prev,
-      [id]: Math.max(0, (prev[id] || 0) + delta)
-    }));
+    const current = stockMap[id] ?? 0;
+    const newStock = Math.max(0, current + delta);
+    setStockMap(prev => ({ ...prev, [id]: newStock }));
+    syncStockToBackend(id, newStock);
   };
 
   const setStockValue = (id, val) => {
@@ -56,16 +70,24 @@ export default function AdminInventory() {
     }
   };
 
-  const markInStock = (id) => {
-    if (stockMap[id] === 0) {
-      setStockMap(prev => ({ ...prev, [id]: 10 }));
+  const handleStockBlur = (id) => {
+    const newStock = stockMap[id] ?? 0;
+    const p = backendProducts.find(x => x.id === id);
+    if (p && p.stock !== newStock) {
+      syncStockToBackend(id, newStock);
     }
-    showToast('Marked as In Stock', 'success');
+  };
+
+  const markInStock = (id) => {
+    if ((stockMap[id] ?? 0) === 0) {
+      setStockMap(prev => ({ ...prev, [id]: 10 }));
+      syncStockToBackend(id, 10);
+    }
   };
 
   const markOutOfStock = (id) => {
     setStockMap(prev => ({ ...prev, [id]: 0 }));
-    showToast('Marked as Out of Stock', 'success');
+    syncStockToBackend(id, 0);
   };
 
   const showToast = (msg, type) => {
@@ -73,8 +95,8 @@ export default function AdminInventory() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const lowCount = products.filter(p => (stockMap[p.id] || 0) > 0 && (stockMap[p.id] || 0) <= 5).length;
-  const outCount = products.filter(p => (stockMap[p.id] || 0) === 0).length;
+  const lowCount = backendProducts.filter(p => (stockMap[p.id] ?? p.stock ?? 0) > 0 && (stockMap[p.id] ?? p.stock ?? 0) <= 5).length;
+  const outCount = backendProducts.filter(p => (stockMap[p.id] ?? p.stock ?? 0) === 0).length;
 
   return (
     <>
@@ -92,7 +114,7 @@ export default function AdminInventory() {
           </div>
           <div className="admin-stat-card__info">
             <div className="admin-stat-card__label">In Stock</div>
-            <div className="admin-stat-card__value">{products.length - lowCount - outCount}</div>
+            <div className="admin-stat-card__value">{backendProducts.length - lowCount - outCount}</div>
           </div>
         </div>
         <div className="admin-stat-card">
@@ -164,7 +186,7 @@ export default function AdminInventory() {
                       <img src={p.image} alt={p.name} className="admin-product-thumb" />
                       <div>
                         <div className="admin-product-cell__name">{p.name}</div>
-                        <div className="admin-product-cell__sku">SKU-{p.id}</div>
+                        <div className="admin-product-cell__sku">{p.sku || `SKU-${p.id}`}</div>
                       </div>
                     </div>
                   </td>
@@ -176,6 +198,7 @@ export default function AdminInventory() {
                       style={{ width: 80, textAlign: 'center', padding: '6px 8px', fontSize: 14, fontWeight: 700 }}
                       value={p.stock}
                       onChange={e => setStockValue(p.id, e.target.value)}
+                      onBlur={() => handleStockBlur(p.id)}
                       min={0}
                     />
                   </td>

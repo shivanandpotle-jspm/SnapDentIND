@@ -25,6 +25,11 @@ export function AuthProvider({ children }) {
   const login = (token, userData) => {
     localStorage.setItem('snapdent_token', token);
     localStorage.setItem('snapdent_user', JSON.stringify(userData));
+    if (userData.role === 'admin') {
+      localStorage.setItem('snapdent_admin', 'true');
+    } else {
+      localStorage.removeItem('snapdent_admin');
+    }
     setUser(userData);
   };
 

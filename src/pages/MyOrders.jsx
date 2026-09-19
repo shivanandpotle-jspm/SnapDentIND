@@ -1,8 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getMyOrders } from '../api/orders';
+import { getMyOrders, verifyPayment } from '../api/orders';
 import './MyOrders.css';
+
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const ORDER_STEPS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
 const STEP_ICONS = {
@@ -20,6 +30,8 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true);
   const [viewOrder, setViewOrder] = useState(null);
 
+  const [razorpayKeyId, setRazorpayKeyId] = useState('');
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -29,10 +41,62 @@ export default function MyOrders() {
     getMyOrders()
       .then(data => {
         setOrders(data.orders);
+        if (data.razorpayKeyId) setRazorpayKeyId(data.razorpayKeyId);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [isAuthenticated, navigate]);
+
+  const handleRetryPayment = async (order) => {
+    try {
+      const resLoaded = await loadRazorpay();
+      if (!resLoaded) {
+        alert('Razorpay SDK failed to load. Are you offline?');
+        return;
+      }
+
+      const options = {
+        key: razorpayKeyId,
+        amount: Math.round(order.total * 100),
+        currency: 'INR',
+        name: 'SnapDent India',
+        description: 'Retry Order Payment',
+        order_id: order.razorpayOrderId,
+        handler: async function (response) {
+          try {
+            await verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderId: order.orderId
+            });
+            // Update local state
+            const updated = { ...order, status: 'confirmed', paymentStatus: 'paid' };
+            setOrders(orders.map(o => o._id === order._id ? updated : o));
+            setViewOrder(updated);
+            alert('Payment Successful!');
+          } catch (err) {
+            alert('Payment verification failed.');
+          }
+        },
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+          contact: order.shippingAddress?.phone
+        },
+        theme: { color: '#E31E24' }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.on('payment.failed', function (response) {
+        alert(response.error.description || 'Payment failed.');
+      });
+      paymentObject.open();
+
+    } catch (err) {
+      alert('Failed to initialize payment.');
+    }
+  };
 
   const statusCls = (s) => {
     const m = { delivered: 'active', processing: 'info', shipped: 'primary', pending: 'warning', cancelled: 'danger', confirmed: 'confirmed' };
@@ -77,7 +141,14 @@ export default function MyOrders() {
                 Placed on {new Date(viewOrder.createdAt).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </span>
             </div>
-            <span className={`status-badge status-${statusCls(viewOrder.status)}`}>{viewOrder.status}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {viewOrder.status === 'pending' && viewOrder.paymentMethod !== 'cod' && viewOrder.razorpayOrderId && (
+                <button className="btn btn-primary" onClick={() => handleRetryPayment(viewOrder)} style={{ padding: '8px 16px', fontSize: '14px', height: 'auto' }}>
+                  Complete Payment
+                </button>
+              )}
+              <span className={`status-badge status-${statusCls(viewOrder.status)}`}>{viewOrder.status}</span>
+            </div>
           </div>
 
           {/* Order Timeline */}
@@ -117,6 +188,7 @@ export default function MyOrders() {
                     }
                     <div className="detail-item-info">
                       <h4>{item.name}</h4>
+                      {item.variant && <p className="detail-item-qty" style={{ color: 'var(--primary)' }}>Option: {item.variant}</p>}
                       <p className="detail-item-qty">Qty: {item.qty} × ₹{item.price.toLocaleString()}</p>
                     </div>
                     <span className="detail-item-price">₹{(item.price * item.qty).toLocaleString()}</span>

@@ -11,6 +11,8 @@ const store = {
   categories: [],
   orders: [],
   cart: [],
+  discounts: [],
+  appliedDiscount: null,
   settings: {
     storeName: 'SnapDent India',
     contactEmail: 'support@snapdent.com',
@@ -63,9 +65,10 @@ export const updateStore = (key, data) => {
  */
 export const loadStoreFromAPI = async () => {
   try {
-    const [productsRes, categoriesRes] = await Promise.all([
+    const [productsRes, categoriesRes, discountsRes] = await Promise.all([
       get('/products?limit=200'),
       get('/categories'),
+      get('/discounts'),
     ]);
 
     // Map API products to the format the frontend expects
@@ -100,6 +103,7 @@ export const loadStoreFromAPI = async () => {
 
     store.products = mappedProducts;
     store.categories = mappedCategories;
+    store.discounts = discountsRes.discounts || [];
     store.loaded = true;
     listeners.forEach(l => l());
   } catch (error) {

@@ -196,3 +196,35 @@ export const uploadProductImages = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/products/bulk — Bulk create products (Admin)
+ */
+export const bulkCreateProducts = async (req, res, next) => {
+  try {
+    const { products } = req.body;
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ success: false, error: 'No products provided.' });
+    }
+
+    const formattedProducts = products.map(p => ({
+      name: p.name,
+      category: p.category,
+      subcategory: p.subcategory || '',
+      price: Number(p.price) || 0,
+      description: p.description || '',
+      material: p.material || '',
+      sku: p.sku || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      stock: Number(p.stock) || 50,
+      badge: p.badge || '',
+      isVisible: p.isVisible !== false,
+      inStock: (Number(p.stock) || 50) > 0,
+      isFeatured: p.isFeatured === true
+    }));
+
+    const created = await Product.create(formattedProducts);
+    res.status(201).json({ success: true, count: created.length });
+  } catch (error) {
+    next(error);
+  }
+};

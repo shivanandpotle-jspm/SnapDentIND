@@ -8,6 +8,7 @@ const orderItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   price: { type: Number, required: true },
   qty: { type: Number, required: true, min: 1 },
+  variant: { type: String, default: '' },
   image: String,
 }, { _id: false });
 
@@ -49,6 +50,11 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  discount: {
+    type: Number,
+    default: 0,
+  },
+  discountCode: String,
   shipping: {
     type: Number,
     default: 0,

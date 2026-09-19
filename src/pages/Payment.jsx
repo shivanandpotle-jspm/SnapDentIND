@@ -4,6 +4,7 @@ import CheckoutStepper from '../components/CheckoutStepper';
 import { useAuth } from '../context/AuthContext';
 import { getCart } from '../api/cart';
 import { createOrder, verifyPayment } from '../api/orders';
+import { useStore } from '../store';
 import './Checkout.css';
 
 const loadRazorpay = () => {
@@ -17,6 +18,8 @@ const loadRazorpay = () => {
 };
 
 export default function Payment() {
+  const store = useStore();
+  const appliedDiscount = store.appliedDiscount;
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
@@ -51,7 +54,17 @@ export default function Payment() {
 
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
   const shipping = subtotal > 500 ? 0 : 50;
-  const total = subtotal + shipping;
+
+  let discountAmount = 0;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === 'percentage') {
+      discountAmount = subtotal * (appliedDiscount.value / 100);
+    } else {
+      discountAmount = appliedDiscount.value;
+    }
+  }
+
+  const total = Math.max(0, subtotal - discountAmount) + shipping;
 
   const handlePlaceOrder = async () => {
     setError('');
@@ -59,10 +72,16 @@ export default function Payment() {
 
     try {
       const items = cartItems.map(i => ({ product: i.id, qty: i.qty }));
-      const res = await createOrder({ items, shippingAddress, paymentMethod });
+      const res = await createOrder({ 
+        items, 
+        shippingAddress, 
+        paymentMethod,
+        discountAmount,
+        discountCode: appliedDiscount?.code
+      });
 
       if (paymentMethod === 'cod') {
-        navigate('/order-success');
+        navigate('/order-success', { state: { orderId: res.order._id } });
         return;
       }
 
@@ -90,7 +109,7 @@ export default function Payment() {
               razorpay_signature: response.razorpay_signature,
               orderId: res.order.orderId
             });
-            navigate('/order-success');
+            navigate('/order-success', { state: { orderId: res.order._id } });
           } catch (err) {
             setError('Payment verification failed.');
             setProcessing(false);
@@ -165,6 +184,12 @@ export default function Payment() {
         <aside className="checkout-summary card-elevated">
           <h3 className="summary-title">Order Summary</h3>
           <div className="summary-row"><span className="summary-label">Subtotal</span><span className="summary-value">₹{subtotal.toFixed(2)}</span></div>
+          {appliedDiscount && (
+            <div className="summary-row" style={{ color: 'var(--primary)' }}>
+              <span className="summary-label">Discount ({appliedDiscount.code})</span>
+              <span className="summary-value">-₹{discountAmount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="summary-row"><span className="summary-label">Shipping</span><span className="summary-value free-shipping-text">{shipping === 0 ? 'Free' : `₹${shipping.toFixed(2)}`}</span></div>
           <div className="summary-divider" />
           <div className="summary-row summary-total"><span>Total</span><span>₹{total.toFixed(2)}</span></div>

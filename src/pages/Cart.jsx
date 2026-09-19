@@ -3,15 +3,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import CheckoutStepper from '../components/CheckoutStepper';
 import { useAuth } from '../context/AuthContext';
 import { getCart, updateCartItem, removeFromCart } from '../api/cart';
-import { updateStore } from '../store';
+import { updateStore, useStore } from '../store';
 import './Cart.css';
 
 export default function Cart() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const store = useStore();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [promoCode, setPromoCode] = useState('');
+  const appliedDiscount = store.appliedDiscount;
+  const [promoError, setPromoError] = useState('');
+
+  const handleApplyPromo = () => {
+    if (!promoCode.trim()) return;
+    const found = store.discounts?.find(d => d.code === promoCode.toUpperCase() && d.status === 'Active');
+    if (found) {
+      updateStore('appliedDiscount', found);
+      setPromoError('');
+    } else {
+      updateStore('appliedDiscount', null);
+      setPromoError('Invalid or expired promo code');
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -33,16 +49,16 @@ export default function Cart() {
     fetchCart();
   }, [isAuthenticated]);
 
-  const updateQty = async (id, delta) => {
-    const item = cartItems.find(i => String(i.id) === String(id));
+  const updateQty = async (cartItemId, delta) => {
+    const item = cartItems.find(i => String(i.cartItemId) === String(cartItemId));
     if (!item) return;
     const newQty = Math.max(1, item.qty + delta);
     
     // Optimistic update
-    setCartItems(prev => prev.map(i => String(i.id) === String(id) ? { ...i, qty: newQty } : i));
+    setCartItems(prev => prev.map(i => String(i.cartItemId) === String(cartItemId) ? { ...i, qty: newQty } : i));
     
     try {
-      const data = await updateCartItem(id, newQty);
+      const data = await updateCartItem(cartItemId, newQty);
       setCartItems(data.cart);
       updateStore('cart', data.cart);
     } catch (err) {
@@ -52,12 +68,12 @@ export default function Cart() {
     }
   };
 
-  const removeItem = async (id) => {
+  const removeItem = async (cartItemId) => {
     // Optimistic update
-    setCartItems(prev => prev.filter(i => String(i.id) !== String(id)));
+    setCartItems(prev => prev.filter(i => String(i.cartItemId) !== String(cartItemId)));
     
     try {
-      const data = await removeFromCart(id);
+      const data = await removeFromCart(cartItemId);
       setCartItems(data.cart);
       updateStore('cart', data.cart);
     } catch (err) {
@@ -67,8 +83,18 @@ export default function Cart() {
   };
 
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const shipping = subtotal > 500 ? 0 : 50;
-  const total = subtotal + shipping;
+  const shipping = cartItems.length === 0 ? 0 : (subtotal > 500 ? 0 : 50);
+
+  let discountAmount = 0;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === 'percentage') {
+      discountAmount = subtotal * (appliedDiscount.value / 100);
+    } else {
+      discountAmount = appliedDiscount.value;
+    }
+  }
+
+  const total = Math.max(0, subtotal - discountAmount) + shipping;
 
   if (!isAuthenticated) {
     return (
@@ -115,7 +141,7 @@ export default function Cart() {
           ) : (
             <div className="cart-item-list">
               {cartItems.map(item => (
-                <div key={item.id} className="cart-item-card card">
+                <div key={item.cartItemId} className="cart-item-card card">
                   <Link to={`/shop`} className="cart-item-image-wrapper">
                     <img src={item.image} alt={item.name} />
                   </Link>
@@ -125,6 +151,7 @@ export default function Cart() {
                       <div>
                         <span className="cart-item-category">{item.category}</span>
                         <Link to={`/shop`} className="cart-item-name">{item.name}</Link>
+                        {item.variant && <p className="cart-item-meta" style={{ color: 'var(--primary)', fontWeight: 600 }}>Option: {item.variant}</p>}
                         <p className="cart-item-meta">Material: {item.material}</p>
                       </div>
                       <span className="cart-item-price-unit">₹{item.price.toFixed(2)}</span>
@@ -132,11 +159,11 @@ export default function Cart() {
 
                     <div className="cart-item-actions">
                       <div className="qty-control">
-                        <button className="qty-btn" onClick={() => updateQty(item.id, -1)} aria-label="Decrease quantity">
+                        <button className="qty-btn" onClick={() => updateQty(item.cartItemId, -1)} aria-label="Decrease quantity">
                           <span className="material-symbols-outlined">remove</span>
                         </button>
                         <span className="qty-display">{item.qty}</span>
-                        <button className="qty-btn" onClick={() => updateQty(item.id, 1)} aria-label="Increase quantity">
+                        <button className="qty-btn" onClick={() => updateQty(item.cartItemId, 1)} aria-label="Increase quantity">
                           <span className="material-symbols-outlined">add</span>
                         </button>
                       </div>
@@ -145,7 +172,7 @@ export default function Cart() {
                         <span className="cart-item-price-total">
                           ₹{(item.price * item.qty).toFixed(2)}
                         </span>
-                        <button className="remove-btn" onClick={() => removeItem(item.id)} aria-label="Remove item">
+                        <button className="remove-btn" onClick={() => removeItem(item.cartItemId)} aria-label="Remove item">
                           <span className="material-symbols-outlined">delete_outline</span>
                           <span className="remove-text">Remove</span>
                         </button>
@@ -175,11 +202,33 @@ export default function Cart() {
               </span>
             </div>
 
+            {appliedDiscount && (
+              <div className="summary-row" style={{ color: 'var(--primary)' }}>
+                <span className="summary-label">Discount ({appliedDiscount.code})</span>
+                <span className="summary-value">-₹{discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="summary-divider" />
 
             <div className="summary-row summary-total">
               <span>Total</span>
               <span>₹{total.toFixed(2)}</span>
+            </div>
+
+            <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text" 
+                  value={promoCode} 
+                  onChange={e => setPromoCode(e.target.value)} 
+                  placeholder="Promo Code" 
+                  className="input-field"
+                  style={{ textTransform: 'uppercase', height: '40px', flex: 1 }}
+                />
+                <button className="btn btn-outline" onClick={handleApplyPromo} style={{ height: '40px', padding: '0 16px' }}>Apply</button>
+              </div>
+              {promoError && <p style={{ color: 'var(--error)', fontSize: '12px', marginTop: '4px' }}>{promoError}</p>}
             </div>
 
             {shipping === 0 && subtotal > 0 && (

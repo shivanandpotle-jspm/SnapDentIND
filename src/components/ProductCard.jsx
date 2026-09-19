@@ -1,39 +1,13 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useStore, updateStore } from '../store';
-import { useAuth } from '../context/AuthContext';
-import { addToCart } from '../api/cart';
+import { Link, useNavigate } from 'react-router-dom';
 import './ProductCard.css';
 
 export default function ProductCard({ product }) {
-  const [added, setAdded] = useState(false);
-  const store = useStore();
-  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
-  const handleAddToCart = async (e) => {
+  const handleAddToCart = (e) => {
     e.preventDefault();
     if (!product.inStock) return;
-    
-    const existing = store.cart.find(item => String(item.id) === String(product.id));
-    let newCart;
-    if (existing) {
-      newCart = store.cart.map(item => String(item.id) === String(product.id) ? { ...item, qty: item.qty + 1 } : item);
-    } else {
-      newCart = [...store.cart, { id: product.id, qty: 1 }];
-    }
-    updateStore('cart', newCart);
-
-    if (isAuthenticated) {
-      try {
-        const data = await addToCart(product.id, 1);
-        updateStore('cart', data.cart);
-      } catch (err) {
-        console.error('Failed to add to backend cart', err);
-      }
-    }
-
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
+    navigate(`/product/${product.id}`);
   };
 
   return (
@@ -42,6 +16,9 @@ export default function ProductCard({ product }) {
         <img src={product.image} alt={product.name} loading="lazy" />
         {product.badge && (
           <span className="product-card__badge">{product.badge}</span>
+        )}
+        {product.stock > 0 && product.stock < 10 && (
+          <span className="product-card__badge" style={{ background: '#dc2626', color: 'white', top: 'auto', bottom: 12 }}>Only {product.stock} pcs left!</span>
         )}
         <div className="product-card__overlay">
           <span className="product-card__quick-view btn">
@@ -66,16 +43,16 @@ export default function ProductCard({ product }) {
             <span className="product-card__price">₹{product.price.toFixed(2)}</span>
           </div>
           <button
-            className={`product-card__add-btn btn btn-primary ${added ? 'product-card__add-btn--added' : ''}`}
+            className={`product-card__add-btn btn btn-primary`}
             onClick={handleAddToCart}
             disabled={!product.inStock}
             style={{ opacity: product.inStock ? 1 : 0.5, cursor: product.inStock ? 'pointer' : 'not-allowed' }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-              {added ? 'check_circle' : (product.inStock ? 'shopping_basket' : 'block')}
+              {product.inStock ? 'visibility' : 'block'}
             </span>
             <span className="product-card__add-label">
-              {added ? 'Added' : (product.inStock ? 'Add to Cart' : 'Out of Stock')}
+              {product.inStock ? 'View Details' : 'Out of Stock'}
             </span>
           </button>
         </div>

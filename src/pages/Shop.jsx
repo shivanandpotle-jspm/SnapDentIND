@@ -78,7 +78,7 @@ export default function Shop() {
 
   return (
     <>
-      <main className="shop-page animate-fade-in-up">
+      <main className="shop-page animate-fade-in-up container-max">
       
       {/* Shop Page Header */}
       <div className="shop-header">

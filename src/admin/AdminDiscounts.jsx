@@ -1,27 +1,24 @@
 import { useState } from 'react';
 import { categoryTree } from '../data/products';
-
-const DEMO_DISCOUNTS = [
-  { id: 1, name: 'Summer Sale', type: 'percentage', value: 15, startDate: '2026-08-01', endDate: '2026-08-31', category: 'All', status: 'Active', code: 'SUMMER15' },
-  { id: 2, name: 'Implant Bundle Deal', type: 'fixed', value: 200, startDate: '2026-08-15', endDate: '2026-09-15', category: 'Implantology', status: 'Active', code: 'IMPLANT200' },
-  { id: 3, name: 'New Customer Offer', type: 'percentage', value: 10, startDate: '2026-07-01', endDate: '2026-07-31', category: 'All', status: 'Expired', code: 'WELCOME10' },
-];
+import { useStore, updateStore } from '../store';
+import { createDiscount, updateDiscount, deleteDiscount } from '../api/discounts';
 
 export default function AdminDiscounts() {
-  const [discounts, setDiscounts] = useState(DEMO_DISCOUNTS);
+  const store = useStore();
+  const discounts = store.discounts || [];
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const emptyForm = { name: '', type: 'percentage', value: '', startDate: '', endDate: '', category: 'All', code: '' };
+  const emptyForm = { name: '', type: 'percentage', value: '', startDate: '', endDate: '', category: 'All', code: '', showOnHome: false };
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
 
   const openAdd = () => { setEditId(null); setForm(emptyForm); setFormErrors({}); setShowForm(true); };
   const openEdit = (d) => {
     setEditId(d.id);
-    setForm({ name: d.name, type: d.type, value: String(d.value), startDate: d.startDate, endDate: d.endDate, category: d.category, code: d.code });
+    setForm({ name: d.name, type: d.type, value: String(d.value), startDate: d.startDate, endDate: d.endDate, category: d.category, code: d.code, showOnHome: d.showOnHome || false });
     setFormErrors({});
     setShowForm(true);
   };
@@ -37,26 +34,55 @@ export default function AdminDiscounts() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    if (editId) {
-      setDiscounts(prev => prev.map(d => d.id === editId ? { ...d, ...form, value: Number(form.value), status: 'Active' } : d));
-    } else {
-      setDiscounts(prev => [...prev, { id: Date.now(), ...form, value: Number(form.value), status: 'Active' }]);
+    try {
+      const payload = { ...form, value: Number(form.value) };
+      if (editId) {
+        const { discount } = await updateDiscount(editId, payload);
+        updateStore('discounts', discounts.map(d => d.id === editId ? discount : d));
+      } else {
+        const { discount } = await createDiscount(payload);
+        updateStore('discounts', [discount, ...discounts]);
+      }
+      showToast(editId ? 'Discount updated!' : 'Discount created!', 'success');
+      setShowForm(false);
+    } catch (err) {
+      showToast(err.message || 'Error saving discount', 'error');
     }
-    showToast(editId ? 'Discount updated!' : 'Discount created!', 'success');
-    setShowForm(false);
   };
 
-  const toggleStatus = (id) => {
-    setDiscounts(prev => prev.map(d => d.id === id ? { ...d, status: d.status === 'Active' ? 'Disabled' : 'Active' } : d));
+  const toggleStatus = async (id) => {
+    try {
+      const target = discounts.find(d => d.id === id);
+      const newStatus = target.status === 'Active' ? 'Disabled' : 'Active';
+      const { discount } = await updateDiscount(id, { status: newStatus });
+      updateStore('discounts', discounts.map(d => d.id === id ? discount : d));
+    } catch (err) {
+      showToast('Error updating status', 'error');
+    }
   };
 
-  const handleDelete = () => {
-    setDiscounts(prev => prev.filter(d => d.id !== deleteTarget.id));
-    showToast('Discount deleted', 'success');
-    setDeleteTarget(null);
+  const toggleHome = async (id) => {
+    try {
+      const target = discounts.find(d => d.id === id);
+      const { discount } = await updateDiscount(id, { showOnHome: !target.showOnHome });
+      updateStore('discounts', discounts.map(d => d.id === id ? discount : d));
+    } catch (err) {
+      showToast('Error updating home visibility', 'error');
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteDiscount(deleteTarget.id);
+      updateStore('discounts', discounts.filter(d => d.id !== deleteTarget.id));
+      showToast('Discount deleted', 'success');
+      setDeleteTarget(null);
+    } catch (err) {
+      showToast('Error deleting discount', 'error');
+    }
   };
 
   const showToast = (msg, type) => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
@@ -124,6 +150,10 @@ export default function AdminDiscounts() {
                     {categoryTree.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
+                <div className="admin-form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+                  <input type="checkbox" id="showOnHome" checked={form.showOnHome} onChange={e => setForm({ ...form, showOnHome: e.target.checked })} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                  <label htmlFor="showOnHome" style={{ margin: 0, fontWeight: 600, cursor: 'pointer' }}>Show this promo on the Home Page</label>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button type="submit" className="admin-btn admin-btn--primary">
@@ -185,6 +215,7 @@ export default function AdminDiscounts() {
                 <th>Value</th>
                 <th>Duration</th>
                 <th>Category</th>
+                <th>Home</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -198,6 +229,9 @@ export default function AdminDiscounts() {
                   <td style={{ fontWeight: 600 }}>{d.type === 'percentage' ? `${d.value}%` : `₹${d.value}`}</td>
                   <td style={{ fontSize: 12, color: '#64748b' }}>{d.startDate} → {d.endDate}</td>
                   <td>{d.category}</td>
+                  <td>
+                    <button className={`admin-toggle ${d.showOnHome ? 'admin-toggle--on' : ''}`} onClick={() => toggleHome(d.id)} title="Show on Home Page" />
+                  </td>
                   <td>
                     <span className={`admin-badge admin-badge--${d.status === 'Active' ? 'active' : d.status === 'Expired' ? 'danger' : 'inactive'}`}>
                       {d.status}

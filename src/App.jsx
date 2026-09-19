@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
+import ScrollToTop from './components/ScrollToTop';
 
 import Home from './pages/Home';
 import Shop from './pages/Shop';
@@ -16,7 +17,8 @@ import MyOrders from './pages/MyOrders';
 import Shipping from './pages/Shipping';
 import Payment from './pages/Payment';
 import OrderSuccess from './pages/OrderSuccess';
-
+import PrivacyPolicy from './pages/PrivacyPage';
+import TermsOfService from './pages/TermsPage';
 import AdminLayout from './admin/AdminLayout';
 import AdminLogin from './admin/AdminLogin';
 import AdminDashboard from './admin/AdminDashboard';
@@ -36,6 +38,7 @@ function AppContent() {
 
   return (
     <>
+      <ScrollToTop />
       {!isAdmin && <Navbar />}
       <Routes>
         {/* Customer Routes */}
@@ -51,6 +54,8 @@ function AppContent() {
         <Route path="/shipping" element={<Shipping />} />
         <Route path="/payment" element={<Payment />} />
         <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

@@ -4,13 +4,15 @@ import Product from '../models/Product.js';
 import User from '../models/User.js';
 import getRazorpay from '../config/razorpay.js';
 import { sendOrderConfirmationEmail, sendOrderStatusEmail } from '../services/email.service.js';
+import { generateInvoicePDF } from '../utils/invoice.js';
+import ContactMessage from '../models/ContactMessage.js';
 
 /**
  * POST /api/orders — Create order + Razorpay payment order
  */
 export const createOrder = async (req, res, next) => {
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { items, shippingAddress, paymentMethod, discountAmount = 0, discountCode } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, error: 'No items in order.' });
@@ -35,14 +37,15 @@ export const createOrder = async (req, res, next) => {
         name: product.name,
         price,
         qty: item.qty,
+        variant: item.variant || '',
         image: product.images[0]?.url || '',
       });
       subtotal += price * item.qty;
     }
 
-    const shipping = subtotal > 500 ? 0 : 25;
+    const shipping = subtotal > 500 ? 0 : 50;
     const tax = 0; // Can add GST calculation later
-    const total = subtotal + shipping + tax;
+    const total = Math.max(0, subtotal - discountAmount) + shipping + tax;
 
     const order = await Order.create({
       user: req.user._id,
@@ -50,6 +53,8 @@ export const createOrder = async (req, res, next) => {
       shippingAddress,
       paymentMethod,
       subtotal,
+      discount: discountAmount,
+      discountCode,
       shipping,
       tax,
       total,
@@ -58,9 +63,18 @@ export const createOrder = async (req, res, next) => {
 
     // Deduct stock
     for (const item of orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
+      const updatedProduct = await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: -item.qty },
-      });
+      }, { new: true });
+
+      if (updatedProduct && updatedProduct.stock <= 0) {
+        await ContactMessage.create({
+          name: 'System Alerts',
+          email: 'system@snapdent.com',
+          subject: `Stock Out Alert: ${updatedProduct.name}`,
+          message: `The product "${updatedProduct.name}" (SKU: ${updatedProduct.sku}) is now out of stock following Order #${order.orderId}. Please restock.`
+        });
+      }
     }
 
     // Clear user's cart
@@ -87,11 +101,14 @@ export const createOrder = async (req, res, next) => {
       await order.save();
     }
 
-    // Send confirmation email
-    try {
-      await sendOrderConfirmationEmail(req.user.email, req.user.name, order);
-    } catch (emailErr) {
-      console.error('Order confirmation email failed:', emailErr.message);
+    // Send confirmation email for COD immediately
+    if (paymentMethod === 'cod') {
+      try {
+        const invoiceBuffer = await generateInvoicePDF(order);
+        await sendOrderConfirmationEmail(req.user.email, req.user.name, order, invoiceBuffer);
+      } catch (emailErr) {
+        console.error('Order confirmation email failed:', emailErr.message);
+      }
     }
 
     res.status(201).json({
@@ -133,6 +150,15 @@ export const verifyPayment = async (req, res, next) => {
     order.status = 'confirmed';
     order.statusHistory.push({ status: 'confirmed', note: 'Payment verified via Razorpay' });
     await order.save();
+
+    // Send confirmation email with invoice for prepaid orders
+    await order.populate('user', 'name email');
+    try {
+      const invoiceBuffer = await generateInvoicePDF(order);
+      await sendOrderConfirmationEmail(order.user.email, order.user.name, order, invoiceBuffer);
+    } catch (emailErr) {
+      console.error('Order confirmation email failed:', emailErr.message);
+    }
 
     res.json({ success: true, order });
   } catch (error) {
@@ -182,7 +208,7 @@ export const getOrders = async (req, res, next) => {
 export const getMyOrders = async (req, res, next) => {
   try {
     const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
-    res.json({ success: true, orders });
+    res.json({ success: true, orders, razorpayKeyId: process.env.RAZORPAY_KEY_ID });
   } catch (error) {
     next(error);
   }
@@ -236,6 +262,31 @@ export const updateOrderStatus = async (req, res, next) => {
     }
 
     res.json({ success: true, order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/orders/:id/invoice — Download order invoice PDF
+ */
+export const downloadInvoice = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
+    if (!order) {
+      return res.status(404).json({ success: false, error: 'Order not found.' });
+    }
+    
+    // Ensure user can only download their own invoice (unless admin)
+    if (req.user.role !== 'admin' && order.user._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized.' });
+    }
+
+    const pdfBuffer = await generateInvoicePDF(order);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Invoice-${order.orderId}.pdf`);
+    res.send(pdfBuffer);
   } catch (error) {
     next(error);
   }

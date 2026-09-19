@@ -57,20 +57,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="section-gap container-max" style={{ textAlign: 'center' }}>
-        <h2 className="section-title" style={{ color: 'var(--primary)' }}>Shop by Category</h2>
-        <div className="categories-grid">
-          {categoryImages.map((cat, i) => (
-            <Link to="/shop" key={cat.name} className={`category-item animate-fade-in-up stagger-${i + 1}`} style={{ opacity: 0 }}>
-              <div className="category-image">
-                <img src={cat.image} alt={cat.name} loading="lazy" />
-                <div className="category-hover">
-                  <span>Explore</span>
-                </div>
+      {/* Offers & Promos */}
+      <section className="section-gap container-max">
+        <h2 className="section-title" style={{ color: 'var(--primary)', textAlign: 'center' }}>Special Offers & Promos</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          {store.discounts.filter(d => d.status === 'Active' && d.showOnHome).map(discount => (
+            <div key={discount.id} className="card-elevated animate-fade-in-up" style={{ padding: '24px', borderRadius: '16px', background: 'var(--surface-container-low)', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--primary)', color: 'white', padding: '6px 16px', borderBottomLeftRadius: '12px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                {discount.type === 'percentage' ? `${discount.value}% OFF` : `₹${discount.value} OFF`}
               </div>
-              <h3 className="category-name">{cat.name}</h3>
-            </Link>
+              <h3 style={{ fontSize: '20px', color: 'var(--on-surface)', marginTop: '8px' }}>{discount.name}</h3>
+              <p style={{ color: 'var(--on-surface-variant)', fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
+                {discount.category !== 'All' ? `Applicable on ${discount.category} products.` : 'Applicable on all products across the store.'}
+                <br />
+                Valid until {new Date(discount.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}.
+              </p>
+              <div style={{ background: 'var(--primary-container)', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '18px', color: 'var(--on-primary-container)', letterSpacing: '1px' }}>{discount.code}</span>
+                <button 
+                  onClick={(e) => {
+                    navigator.clipboard.writeText(discount.code);
+                    e.target.innerText = 'COPIED!';
+                    setTimeout(() => e.target.innerText = 'COPY', 2000);
+                  }}
+                  style={{ background: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer', fontWeight: 700, color: 'var(--primary)', transition: '0.2s ease' }}
+                >
+                  COPY
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       </section>

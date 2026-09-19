@@ -83,14 +83,19 @@ export default function AdminOrders() {
           </button>
         </div>
 
-        <div className="admin-grid-layout">
+        <div className="admin-grid-layout" style={{ alignItems: 'start' }}>
           <div>
             <div className="admin-form-card">
               <h3>Order Items</h3>
               <div className="admin-table-container">
                 <table className="admin-table">
                   <thead>
-                    <tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr>
+                    <tr>
+                      <th>Product</th>
+                      <th style={{ textAlign: 'right' }}>Qty</th>
+                      <th style={{ textAlign: 'right' }}>Price</th>
+                      <th style={{ textAlign: 'right' }}>Subtotal</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {viewOrder.items.map((item, i) => (
@@ -98,18 +103,21 @@ export default function AdminOrders() {
                         <td>
                           <div className="admin-product-cell">
                             {item.image ? <img src={item.image} alt={item.name} className="admin-product-thumb" /> : <div className="admin-product-thumb" style={{ background: '#eee' }} />}
-                            <div className="admin-product-cell__name">{item.name}</div>
+                            <div>
+                              <div className="admin-product-cell__name">{item.name}</div>
+                              {item.variant && <div style={{ fontSize: 12, color: 'var(--primary)', marginTop: 2, fontWeight: 600 }}>Option: {item.variant}</div>}
+                            </div>
                           </div>
                         </td>
-                        <td>{item.qty}</td>
-                        <td>₹{item.price.toLocaleString()}</td>
-                        <td style={{ fontWeight: 700 }}>₹{(item.price * item.qty).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right' }}>{item.qty}</td>
+                        <td style={{ textAlign: 'right' }}>₹{item.price.toLocaleString()}</td>
+                        <td style={{ fontWeight: 700, textAlign: 'right' }}>₹{(item.price * item.qty).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div style={{ textAlign: 'right', padding: '16px 16px 0', fontSize: 18, fontWeight: 700 }}>
+              <div style={{ textAlign: 'right', padding: '16px 24px 0', fontSize: 18, fontWeight: 700, borderTop: '1px solid var(--admin-border-light)', marginTop: '16px' }}>
                 Total: ₹{viewOrder.total.toLocaleString()}
               </div>
             </div>

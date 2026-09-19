@@ -12,7 +12,7 @@ const getResend = () => {
   return resendInstance;
 };
 
-const sendEmail = async (to, subject, html) => {
+const sendEmail = async (to, subject, html, attachments = []) => {
   try {
     const resend = getResend();
     if (!resend) return;
@@ -22,6 +22,7 @@ const sendEmail = async (to, subject, html) => {
       to,
       subject,
       html,
+      attachments,
     });
   } catch (error) {
     console.error(`Email send failed to ${to}:`, error.message);
@@ -99,7 +100,7 @@ export const sendPasswordResetEmail = async (email, name, resetUrl) => {
   await sendEmail(email, 'Reset your SnapDent India password', html);
 };
 
-export const sendOrderConfirmationEmail = async (email, name, order) => {
+export const sendOrderConfirmationEmail = async (email, name, order, invoiceBuffer = null) => {
   const itemsHtml = order.items.map(item => `
     <tr>
       <td>${item.name}</td>
@@ -131,7 +132,10 @@ export const sendOrderConfirmationEmail = async (email, name, order) => {
     <p><strong>Shipping to:</strong> ${order.shippingAddress.firstName} ${order.shippingAddress.lastName}, ${order.shippingAddress.street}, ${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.postalCode}</p>
     <p><strong>Payment:</strong> ${order.paymentMethod.toUpperCase()} — ${order.paymentStatus}</p>
   `);
-  await sendEmail(email, `Order Confirmed — ${order.orderId}`, html);
+  
+  const attachments = invoiceBuffer ? [{ filename: `Invoice-${order.orderId}.pdf`, content: invoiceBuffer }] : [];
+  
+  await sendEmail(email, `Order Confirmed — ${order.orderId}`, html, attachments);
 };
 
 export const sendOrderStatusEmail = async (email, name, order) => {

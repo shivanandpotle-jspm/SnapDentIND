@@ -85,12 +85,12 @@ export default function Contact() {
           <div className="contact-info-card card">
             <span className="material-symbols-outlined contact-info-icon">mail</span>
             <h4>Email Us</h4>
-            <p>info@snapdentindia.com</p>
+            <p>support@snapdent.in</p>
           </div>
           <div className="contact-info-card card">
             <span className="material-symbols-outlined contact-info-icon">phone</span>
             <h4>Call Us</h4>
-            <p>+91 123 456 7890</p>
+            <p>+91 96652 00527</p>
           </div>
           <div className="contact-map">
             <img src={heroImages.contact} alt="Office Location" />
