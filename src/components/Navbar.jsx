@@ -96,11 +96,6 @@ export default function Navbar() {
                     <span className="material-symbols-outlined">account_circle</span>
                     <span style={{ fontSize: 13, fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name?.split(' ')[0]}</span>
                   </Link>
-                  {user?.role === 'admin' && (
-                    <Link to="/admin" className="navbar__icon-btn navbar__icon-btn--desktop" aria-label="Admin" title="Admin Dashboard">
-                      <span className="material-symbols-outlined">admin_panel_settings</span>
-                    </Link>
-                  )}
                   <button
                     className="navbar__icon-btn navbar__icon-btn--desktop"
                     aria-label="Logout"
