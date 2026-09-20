@@ -40,8 +40,49 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'admin'],
+    enum: ['customer', 'admin', 'vendor'],
     default: 'customer',
+  },
+  companyName: {
+    type: String,
+    trim: true,
+  },
+  businessCategory: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  businessDescription: {
+    type: String,
+    default: '',
+  },
+  taxId: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved',
+  },
+  rejectionReason: {
+    type: String,
+    default: '',
+  },
+  approvedAt: {
+    type: Date,
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  permissions: [{
+    type: String,
+  }],
+  isActive: {
+    type: Boolean,
+    default: true,
   },
   addresses: [addressSchema],
   cart: [{

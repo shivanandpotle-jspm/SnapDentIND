@@ -16,7 +16,7 @@ export default function Shop() {
 
   const activeCategoryObj = useMemo(() => {
     return categoryTree.find(c => c.name === selectedCategory);
-  }, [selectedCategory]);
+  }, [categoryTree, selectedCategory]);
 
   const handleSelectCategory = (catName) => {
     setSelectedCategory(catName);
@@ -38,6 +38,9 @@ export default function Shop() {
 
   const filtered = useMemo(() => {
     let result = [...products];
+
+    // Filter out products explicitly set to invisible or inactive
+    result = result.filter(p => p.visible !== false && p.status !== 'Inactive');
 
     // Search filter
     if (search) {
@@ -66,7 +69,7 @@ export default function Shop() {
     if (sortBy === 'name') result.sort((a, b) => a.name.localeCompare(b.name));
 
     return result;
-  }, [search, selectedCategory, selectedSubcategory, sortBy]);
+  }, [products, search, selectedCategory, selectedSubcategory, sortBy]);
 
   const clearAllFilters = () => {
     setSearch('');

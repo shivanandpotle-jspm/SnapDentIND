@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getVendors } from '../api/vendor';
 import { logos } from '../data/products';
 import './Admin.css';
 
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
   { section: 'Sales & Users' },
   { label: 'Orders', icon: 'receipt_long', path: '/admin/orders' },
   { label: 'Customers', icon: 'group', path: '/admin/customers' },
+  { label: 'Vendors', icon: 'storefront', path: '/admin/vendors' },
   { label: 'Messages', icon: 'inbox', path: '/admin/messages' },
   { section: 'System' },
   { label: 'Categories', icon: 'category', path: '/admin/categories' },
@@ -22,11 +24,22 @@ const NAV_ITEMS = [
 export default function AdminLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const { isAdmin, isAuthenticated, loading } = useAuth();
+  const { isAdmin, isAuthenticated, loading, logout } = useAuth();
   
   useEffect(() => {
     setSidebarOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    getVendors('status=pending')
+      .then(res => {
+        if (res?.counts?.pending !== undefined) {
+          setPendingCount(res.counts.pending);
+        }
+      })
+      .catch(() => {});
   }, [location.pathname]);
 
   if (loading) return null;
@@ -58,7 +71,10 @@ export default function AdminLayout() {
                 className={`admin-sidebar__link ${location.pathname === item.path ? 'admin-sidebar__link--active' : ''}`}
               >
                 <span className="material-symbols-outlined">{item.icon}</span>
-                {item.label}
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.path === '/admin/vendors' && pendingCount > 0 && (
+                  <span className="admin-sidebar__badge">{pendingCount}</span>
+                )}
               </Link>
             )
           )}
@@ -67,7 +83,7 @@ export default function AdminLayout() {
           <button
             className="admin-sidebar__link"
             onClick={() => {
-              localStorage.removeItem('snapdent_admin');
+              logout();
               window.location.href = '/';
             }}
           >
@@ -94,7 +110,7 @@ export default function AdminLayout() {
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div className="admin-topbar__breadcrumb">
-              <a href="/admin">Admin</a>
+              <Link to="/admin">Admin</Link>
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
               <span>{currentTitle}</span>
             </div>

@@ -34,6 +34,7 @@ export const getProducts = async (req, res, next) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
+      .populate('vendorId', 'name companyName')
       .sort(sortObj)
       .skip(skip)
       .limit(parseInt(limit));
@@ -92,6 +93,11 @@ export const createProduct = async (req, res, next) => {
       productData.images = [{ url: image, driveFileId: '' }];
     }
 
+    // Set vendor ownership
+    if (req.user.role === 'vendor') {
+      productData.vendorId = req.user._id;
+    }
+
     const product = await Product.create(productData);
 
     res.status(201).json({ success: true, product });
@@ -113,6 +119,11 @@ export const updateProduct = async (req, res, next) => {
     const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({ success: false, error: 'Product not found.' });
+    }
+
+    // Vendor ownership check
+    if (req.user.role === 'vendor' && product.vendorId?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to edit this product.' });
     }
 
     if (name !== undefined) product.name = name;
@@ -147,6 +158,11 @@ export const deleteProduct = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Product not found.' });
     }
 
+    // Vendor ownership check — vendors can only delete their own products
+    if (req.user.role === 'vendor' && product.vendorId?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to delete this product.' });
+    }
+
     // Delete images from Google Drive and local storage fallback
     for (const img of product.images) {
       if (img.driveFileId) {
@@ -178,6 +194,11 @@ export const uploadProductImages = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Product not found.' });
     }
 
+    // Vendor ownership check
+    if (req.user.role === 'vendor' && product.vendorId?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to modify this product.' });
+    }
+
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, error: 'No images provided.' });
     }
@@ -192,6 +213,41 @@ export const uploadProductImages = async (req, res, next) => {
     await product.save();
 
     res.json({ success: true, images: product.images });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/products/my — Get products owned by the current vendor
+ */
+export const getMyProducts = async (req, res, next) => {
+  try {
+    const { search, page = 1, limit = 50 } = req.query;
+    const filter = { vendorId: req.user._id };
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Product.countDocuments(filter);
+    const products = await Product.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      count: products.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+      products,
+    });
   } catch (error) {
     next(error);
   }
@@ -216,10 +272,10 @@ export const bulkCreateProducts = async (req, res, next) => {
       material: p.material || '',
       sku: p.sku || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       stock: Number(p.stock) || 50,
-      badge: p.badge || '',
       isVisible: p.isVisible !== false,
       inStock: (Number(p.stock) || 50) > 0,
-      isFeatured: p.isFeatured === true
+      isFeatured: p.isFeatured === true,
+      vendorId: req.user.role === 'vendor' ? req.user._id : undefined
     }));
 
     const created = await Product.create(formattedProducts);

@@ -173,3 +173,25 @@
   color: #c81a20; 
   text-decoration: underline; 
 }
+
+.auth-grid-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .auth-grid-row {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 16px;
+  }
+  .auth-title {
+    font-size: 24px;
+  }
+  .auth-card {
+    padding: 24px;
+  }
+}

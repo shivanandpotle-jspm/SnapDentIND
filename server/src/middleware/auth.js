@@ -23,6 +23,10 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ success: false, error: 'User no longer exists.' });
     }
 
+    if (user.isActive === false) {
+      return res.status(403).json({ success: false, error: 'Account is disabled. Contact admin.' });
+    }
+
     req.user = user;
     next();
   } catch (error) {

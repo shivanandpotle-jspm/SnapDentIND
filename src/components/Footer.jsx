@@ -37,6 +37,11 @@ export default function Footer() {
             <Link to="/privacy-policy" className="footer__link">Privacy Policy</Link>
             <Link to="/terms-of-service" className="footer__link">Terms of Service</Link>
           </div>
+          <div className="footer__link-group">
+            <h4 className="footer__link-title">Portals</h4>
+            <Link to="/vendor/login" className="footer__link">Vendor Portal</Link>
+            <Link to="/admin/login" className="footer__link">Admin Panel</Link>
+          </div>
         </div>
       </div>
 

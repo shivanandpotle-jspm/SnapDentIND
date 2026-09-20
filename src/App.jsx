@@ -31,15 +31,24 @@ import AdminMessages from './admin/AdminMessages';
 import AdminCategories from './admin/AdminCategories';
 import AdminSettings from './admin/AdminSettings';
 import AdminProfile from './admin/AdminProfile';
+import AdminVendors from './admin/AdminVendors';
+
+import VendorLogin from './vendor/VendorLogin';
+import VendorRegister from './vendor/VendorRegister';
+import VendorLayout from './vendor/VendorLayout';
+import VendorDashboard from './vendor/VendorDashboard';
+import VendorProducts from './vendor/VendorProducts';
+import VendorProductForm from './vendor/VendorProductForm';
+import VendorProfile from './vendor/VendorProfile';
 
 function AppContent() {
   const location = useLocation();
-  const isAdmin = location.pathname.startsWith('/admin');
+  const isPanel = location.pathname.startsWith('/admin') || location.pathname.startsWith('/vendor');
 
   return (
     <>
       <ScrollToTop />
-      {!isAdmin && <Navbar />}
+      {!isPanel && <Navbar />}
       <Routes>
         {/* Customer Routes */}
         <Route path="/" element={<Home />} />
@@ -66,14 +75,26 @@ function AppContent() {
           <Route path="discounts" element={<AdminDiscounts />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="customers" element={<AdminCustomers />} />
+          <Route path="vendors" element={<AdminVendors />} />
           <Route path="messages" element={<AdminMessages />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="profile" element={<AdminProfile />} />
         </Route>
+
+        {/* Vendor Routes */}
+        <Route path="/vendor/login" element={<VendorLogin />} />
+        <Route path="/vendor/register" element={<VendorRegister />} />
+        <Route path="/vendor" element={<VendorLayout />}>
+          <Route index element={<VendorDashboard />} />
+          <Route path="products" element={<VendorProducts />} />
+          <Route path="products/add" element={<VendorProductForm />} />
+          <Route path="products/edit/:id" element={<VendorProductForm />} />
+          <Route path="profile" element={<VendorProfile />} />
+        </Route>
       </Routes>
-      {!isAdmin && <Footer />}
-      {!isAdmin && <BackToTop />}
+      {!isPanel && <Footer />}
+      {!isPanel && <BackToTop />}
     </>
   );
 }

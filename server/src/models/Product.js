@@ -70,6 +70,12 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true,
+    default: null,
+  },
   rating: {
     type: Number,
     required: true,
