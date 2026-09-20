@@ -227,7 +227,7 @@ export default function ProductDetail() {
                   </tr>
                   <tr>
                     <th>SKU</th>
-                    <td>{product.sku || `SKU-${product.id.substring(0,6).toUpperCase()}`}</td>
+                    <td>{product.sku || `SKU-${String(product.id).substring(0, 6).toUpperCase()}`}</td>
                   </tr>
                   <tr>
                     <th>Category</th>

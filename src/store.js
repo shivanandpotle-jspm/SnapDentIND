@@ -1,14 +1,41 @@
 import { useState, useEffect, useCallback } from 'react';
 import { get } from './api/client.js';
+import { categoryTree, products as fallbackProducts } from './data/products.js';
 
 /**
  * API-backed store. Falls back to local data if API is unavailable.
  * Keeps the reactive useStore() pattern the frontend already depends on.
  */
 
+const loadLocalProducts = () => {
+  try {
+    const saved = localStorage.getItem('snapdent_products');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Error loading snapdent_products', e);
+  }
+  return fallbackProducts || [];
+};
+
+const loadLocalCategories = () => {
+  try {
+    const saved = localStorage.getItem('snapdent_categories');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Error loading snapdent_categories', e);
+  }
+  return categoryTree || [];
+};
+
 const store = {
-  products: [],
-  categories: [],
+  products: loadLocalProducts(),
+  categories: loadLocalCategories(),
   orders: [],
   cart: [],
   discounts: [],
@@ -57,6 +84,13 @@ const listeners = new Set();
 
 export const updateStore = (key, data) => {
   store[key] = data;
+  try {
+    if (key === 'products' || key === 'categories' || key === 'discounts' || key === 'cart') {
+      localStorage.setItem(`snapdent_${key}`, JSON.stringify(data));
+    }
+  } catch (e) {
+    console.error(`Error saving ${key} to localStorage`, e);
+  }
   listeners.forEach(l => l());
 };
 
@@ -88,6 +122,7 @@ export const loadStoreFromAPI = async () => {
       stock: p.stock,
       sku: p.sku,
       isFeatured: p.isFeatured,
+      vendor: p.vendorId ? { id: p.vendorId._id, name: p.vendorId.name, companyName: p.vendorId.companyName } : null,
     }));
 
     // Map API categories to the format the frontend expects
@@ -105,9 +140,19 @@ export const loadStoreFromAPI = async () => {
     store.categories = mappedCategories;
     store.discounts = discountsRes.discounts || [];
     store.loaded = true;
+    try {
+      localStorage.setItem('snapdent_products', JSON.stringify(mappedProducts));
+      localStorage.setItem('snapdent_categories', JSON.stringify(mappedCategories));
+    } catch (e) {}
     listeners.forEach(l => l());
   } catch (error) {
-    console.warn('API unavailable, store will remain empty until connected:', error.message);
+    console.warn('API unavailable, using local catalog fallback:', error.message);
+    if (!store.products || store.products.length === 0) {
+      store.products = loadLocalProducts();
+      store.categories = loadLocalCategories();
+    }
+    store.loaded = true;
+    listeners.forEach(l => l());
   }
 };
 

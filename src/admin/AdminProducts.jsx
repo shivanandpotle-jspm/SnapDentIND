@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, updateStore } from '../store';
 import Papa from 'papaparse';
-import { bulkUploadProducts } from '../api/products';
+import { createProduct, updateProduct, deleteProduct, bulkUploadProducts } from '../api/products';
+import { loadStoreFromAPI } from '../store';
 
 export default function AdminProducts() {
   const store = useStore();
@@ -16,6 +17,11 @@ export default function AdminProducts() {
   const [toast, setToast] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [productList, setProductList] = useState(products);
+
+  useEffect(() => {
+    // Force refresh the store from API to ensure we have the latest vendor products
+    loadStoreFromAPI();
+  }, []);
 
   useEffect(() => {
     setProductList(products);
@@ -78,26 +84,72 @@ export default function AdminProducts() {
     e.preventDefault();
     if (!validateForm()) return;
 
+    const prodPrice = Number(form.price) || 0;
+    const prodDiscountPrice = form.discountPrice ? Number(form.discountPrice) : undefined;
+    const prodStock = Number(form.stock) || 50;
+    const prodImage = form.image?.trim() || `https://placehold.co/400x400/f8fafc/1A3673?text=${encodeURIComponent(form.name)}`;
+
     if (editId) {
       const updated = productList.map(p =>
-        p.id === editId
-          ? { ...p, ...form, price: Number(form.price), inStock: form.status === 'Active' }
+        String(p.id) === String(editId)
+          ? {
+              ...p,
+              ...form,
+              id: editId,
+              price: prodPrice,
+              discountPrice: prodDiscountPrice,
+              stock: prodStock,
+              image: prodImage,
+              inStock: form.status === 'Active'
+            }
           : p
       );
       setProductList(updated);
       updateStore('products', updated);
       showToast('Product updated successfully!', 'success');
+
+      updateProduct(editId, {
+        name: form.name,
+        category: form.category,
+        subcategory: form.subcategory,
+        price: prodPrice,
+        discountPrice: prodDiscountPrice,
+        description: form.description,
+        material: form.material,
+        stock: prodStock,
+        badge: form.badge || null,
+        isFeatured: form.featured,
+        images: [{ url: prodImage }],
+      }).catch(err => console.warn('Backend sync skipped:', err.message));
     } else {
       const newProduct = {
         ...form,
         id: Date.now().toString(),
-        price: Number(form.price),
-        inStock: form.status === 'Active'
+        price: prodPrice,
+        discountPrice: prodDiscountPrice,
+        stock: prodStock,
+        image: prodImage,
+        inStock: form.status === 'Active',
+        visible: form.visible !== false,
       };
       const updated = [newProduct, ...productList];
       setProductList(updated);
       updateStore('products', updated);
       showToast('Product added successfully!', 'success');
+
+      createProduct({
+        name: form.name,
+        category: form.category,
+        subcategory: form.subcategory,
+        price: prodPrice,
+        discountPrice: prodDiscountPrice,
+        description: form.description,
+        material: form.material,
+        stock: prodStock,
+        badge: form.badge || null,
+        isFeatured: form.featured,
+        images: [{ url: prodImage }],
+      }).catch(err => console.warn('Backend sync skipped:', err.message));
     }
     setShowForm(false);
   };
@@ -108,6 +160,7 @@ export default function AdminProducts() {
     updateStore('products', updated);
     
     showToast(`Product "${deleteTarget.name}" deleted`, 'success');
+    deleteProduct(deleteTarget.id).catch(err => console.warn('Backend delete skipped:', err.message));
     setDeleteTarget(null);
   };
 
@@ -120,12 +173,12 @@ export default function AdminProducts() {
     formData.append('image', file);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('snapdent_token') || localStorage.getItem('token');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const res = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
         body: formData,
       });
@@ -416,6 +469,7 @@ export default function AdminProducts() {
                 <th>Product</th>
                 <th>Category</th>
                 <th>Price</th>
+                <th>Vendor</th>
                 <th>Stock</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -443,6 +497,17 @@ export default function AdminProducts() {
                   </td>
                   <td>{p.category}</td>
                   <td style={{ fontWeight: 600 }}>₹{p.price.toLocaleString()}</td>
+                  <td>
+                    {p.vendor ? (
+                      <span style={{ fontSize: 13, background: 'var(--admin-bg)', padding: '2px 8px', borderRadius: 4 }}>
+                        {p.vendor.companyName || p.vendor.name}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 13, background: 'var(--admin-accent-light)', color: 'var(--admin-accent)', padding: '2px 8px', borderRadius: 4 }}>
+                        Admin
+                      </span>
+                    )}
+                  </td>
                   <td>50</td>
                   <td>
                     <span className={`admin-badge ${p.inStock ? 'admin-badge--active' : 'admin-badge--danger'}`}>

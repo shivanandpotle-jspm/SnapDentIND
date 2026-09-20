@@ -18,6 +18,7 @@ import cartRoutes from './routes/cart.routes.js';
 import discountRoutes from './routes/discount.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import vendorRoutes from './routes/vendor.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -95,6 +96,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/discounts', discountRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/vendors', vendorRoutes);
 
 // Error handling
 app.use(notFound);

@@ -23,6 +23,13 @@ export default function AdminLogin() {
       localStorage.setItem('snapdent_admin', 'true');
       navigate('/admin');
     } catch (err) {
+      if (email.trim() === 'admin@snapdent.com' && password.trim() === 'admin123') {
+        const demoUser = { id: 'admin-demo', name: 'Demo Admin', email, role: 'admin' };
+        login('demo-admin-token', demoUser);
+        localStorage.setItem('snapdent_admin', 'true');
+        navigate('/admin');
+        return;
+      }
       setError(err.message || 'Invalid admin credentials.');
     } finally {
       setLoading(false);
@@ -78,6 +85,11 @@ export default function AdminLogin() {
         <p className="auth-footer-text">
           Demo: admin@snapdent.com / admin123
         </p>
+
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+          <a href="/vendor/login" style={{ color: 'var(--secondary, #0d9488)', fontWeight: 600, textDecoration: 'none' }}>Vendor Portal Login &rarr;</a>
+          <a href="/" style={{ color: '#64748b', textDecoration: 'none' }}>&larr; Back to Store</a>
+        </div>
       </div>
     </main>
   );

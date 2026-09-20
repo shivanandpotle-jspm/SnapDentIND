@@ -92,9 +92,32 @@ export const adminLogin = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Please provide email and password.' });
     }
 
-    const user = await User.findOne({ email, role: 'admin' }).select('+password');
+    // Allow both admin and vendor to log in through this endpoint
+    const user = await User.findOne({ email, role: { $in: ['admin', 'vendor'] } }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ success: false, error: 'Invalid admin credentials.' });
+      return res.status(401).json({ success: false, error: 'Invalid credentials.' });
+    }
+
+    if (user.role === 'vendor') {
+      if (user.approvalStatus === 'pending') {
+        return res.status(403).json({
+          success: false,
+          error: 'Your vendor account is pending admin approval. You will receive access once approved.',
+          approvalStatus: 'pending',
+        });
+      }
+      if (user.approvalStatus === 'rejected') {
+        return res.status(403).json({
+          success: false,
+          error: `Your vendor application was not approved.${user.rejectionReason ? ` Reason: ${user.rejectionReason}` : ''}`,
+          approvalStatus: 'rejected',
+          rejectionReason: user.rejectionReason,
+        });
+      }
+    }
+
+    if (user.isActive === false) {
+      return res.status(403).json({ success: false, error: 'Account is disabled. Contact admin.' });
     }
 
     const token = generateToken(user._id);
@@ -107,6 +130,55 @@ export const adminLogin = async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        companyName: user.companyName || '',
+        permissions: user.permissions || [],
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/auth/register-vendor — Public vendor registration
+ */
+export const registerVendor = async (req, res, next) => {
+  try {
+    const { name, email, password, phone, companyName, businessCategory, businessDescription, taxId } = req.body;
+
+    if (!name || !email || !password || !companyName) {
+      return res.status(400).json({ success: false, error: 'Name, email, password, and company name are required.' });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Email already registered.' });
+    }
+
+    const vendor = await User.create({
+      name,
+      email,
+      password,
+      phone: phone || '',
+      companyName,
+      businessCategory: businessCategory || '',
+      businessDescription: businessDescription || '',
+      taxId: taxId || '',
+      role: 'vendor',
+      approvalStatus: 'pending',
+      isActive: false,
+      permissions: ['product:view', 'product:create', 'product:update'],
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Your vendor application has been submitted successfully and is pending administrator review.',
+      vendor: {
+        id: vendor._id,
+        name: vendor.name,
+        email: vendor.email,
+        companyName: vendor.companyName,
+        approvalStatus: vendor.approvalStatus,
       },
     });
   } catch (error) {
@@ -127,8 +199,11 @@ export const getMe = async (req, res) => {
       email: user.email,
       phone: user.phone,
       role: user.role,
+      companyName: user.companyName || '',
+      permissions: user.permissions || [],
       addresses: user.addresses,
       isVerified: user.isVerified,
+      isActive: user.isActive,
       createdAt: user.createdAt,
     },
   });
