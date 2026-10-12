@@ -1,0 +1,338 @@
+.product-detail-page {
+  padding: 40px 24px 80px;
+}
+
+.product-detail-loading {
+  text-align: center;
+  padding: 100px 20px;
+  font-size: 18px;
+  color: var(--on-surface-variant);
+}
+
+.breadcrumb {
+  margin-bottom: 32px;
+  font-size: 13px;
+  color: var(--on-surface-variant);
+}
+
+.breadcrumb a {
+  color: var(--on-surface-variant);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition-fast);
+}
+
+.breadcrumb a:hover {
+  color: var(--primary);
+}
+
+.breadcrumb-current {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.product-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  margin-bottom: 64px;
+}
+
+@media (min-width: 900px) {
+  .product-detail-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: start;
+  }
+}
+
+.product-detail-image-wrap {
+  position: relative;
+  background: white;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+}
+
+.product-detail-image-wrap img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  max-height: 500px;
+  transition: transform var(--transition-base);
+}
+
+.product-detail-image-wrap:hover img {
+  transform: scale(1.03);
+}
+
+.product-detail-badge {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: var(--primary);
+  color: white;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.product-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+}
+
+.product-subcategory {
+  color: var(--secondary);
+}
+
+.product-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin: 0 0 16px;
+  line-height: 1.2;
+}
+
+.product-price {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 24px;
+}
+
+.product-short-desc {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--on-surface-variant);
+  margin-bottom: 32px;
+}
+
+.product-divider {
+  height: 1px;
+  background: var(--outline-variant);
+  margin: 32px 0;
+}
+
+.options-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--on-surface);
+}
+
+.options-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.option-btn {
+  background: white;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.option-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.option-btn--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(227, 30, 36, 0.2);
+}
+
+.product-actions {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.qty-selector {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-full);
+  height: 52px;
+  background: white;
+  overflow: hidden;
+}
+
+.qty-selector button {
+  width: 44px;
+  height: 100%;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.qty-selector button:hover {
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+}
+
+.qty-selector input {
+  width: 50px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  font-size: 16px;
+  outline: none;
+}
+
+.add-to-cart-btn {
+  flex: 1;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 16px;
+  border-radius: var(--radius-full);
+  min-width: 200px;
+}
+
+.add-to-cart-btn.added {
+  background: var(--secondary);
+}
+
+.product-status {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-in-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #10b981;
+}
+
+.status-out-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--error);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.status-dot.out {
+  background: var(--error);
+  box-shadow: 0 0 0 3px rgba(227, 30, 36, 0.2);
+}
+
+/* Tabs */
+.product-tabs {
+  margin-top: 64px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: white;
+}
+
+.tabs-header {
+  display: flex;
+  border-bottom: 1px solid var(--outline-variant);
+  background: var(--surface-container-lowest);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 20px;
+  background: none;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+}
+
+.tab-btn:hover {
+  color: var(--primary);
+  background: rgba(227, 30, 36, 0.02);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: white;
+}
+
+.tab-content {
+  padding: 40px;
+}
+
+.tab-pane h3 {
+  font-size: 20px;
+  margin: 0 0 20px;
+  color: var(--on-surface);
+}
+
+.tab-pane p {
+  color: var(--on-surface-variant);
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.specs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.specs-table th,
+.specs-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--outline-variant);
+  text-align: left;
+}
+
+.specs-table th {
+  width: 30%;
+  font-weight: 700;
+  color: var(--on-surface);
+  background: var(--surface-container-lowest);
+}
+
+.specs-table td {
+  color: var(--on-surface-variant);
+}

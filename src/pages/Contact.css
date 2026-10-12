@@ -1,0 +1,122 @@
+.contact-header {
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+}
+
+.contact-title {
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 767px) {
+  .contact-title { font-size: 32px; }
+}
+
+.contact-subtitle {
+  font-size: 18px;
+  color: var(--on-surface-variant);
+  max-width: 580px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+}
+
+@media (min-width: 768px) {
+  .contact-grid { grid-template-columns: 3fr 2fr; }
+}
+
+.contact-form-wrap {
+  padding: var(--space-xl);
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.contact-form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 480px) {
+  .contact-form-row { grid-template-columns: 1fr 1fr; }
+}
+
+.contact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-textarea {
+  height: auto;
+  padding: 16px;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.contact-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: var(--space-3xl) 0;
+  text-align: center;
+}
+
+.contact-success h3 { font-size: 24px; font-weight: 600; }
+.contact-success p { color: var(--on-surface-variant); }
+
+/* Info */
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.contact-info-card {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-info-icon {
+  font-size: 28px;
+  color: var(--primary);
+}
+
+.contact-info-card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.contact-info-card p {
+  font-size: 15px;
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+}
+
+.contact-map {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  box-shadow: var(--shadow-md);
+}
+
+.contact-map img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
