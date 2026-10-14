@@ -19,6 +19,8 @@ import Payment from './pages/Payment';
 import OrderSuccess from './pages/OrderSuccess';
 import PrivacyPolicy from './pages/PrivacyPage';
 import TermsOfService from './pages/TermsPage';
+import ShippingPolicy from './pages/ShippingPolicyPage';
+import RefundPolicy from './pages/RefundPolicyPage';
 import AdminLayout from './admin/AdminLayout';
 import AdminLogin from './admin/AdminLogin';
 import AdminDashboard from './admin/AdminDashboard';
@@ -65,6 +67,11 @@ function AppContent() {
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/shipping-policy" element={<ShippingPolicy />} />
+        <Route path="/shipping-info" element={<ShippingPolicy />} />
+        <Route path="/cancellation-refund-policy" element={<RefundPolicy />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/returns" element={<RefundPolicy />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
