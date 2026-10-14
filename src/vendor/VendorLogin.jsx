@@ -197,10 +197,6 @@ export default function VendorLogin() {
           </Link>
         </div>
 
-        <p className="auth-footer-text" style={{ marginTop: 16 }}>
-          Demo: <strong>vendor@snapdent.com</strong> / <strong>vendor123</strong>
-        </p>
-
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
           <Link to="/admin/login" style={{ color: '#64748b', textDecoration: 'none' }}>Admin Login &rarr;</Link>
           <Link to="/" style={{ color: '#64748b', textDecoration: 'none' }}>&larr; Back to Store</Link>

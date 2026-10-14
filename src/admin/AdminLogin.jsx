@@ -82,10 +82,6 @@ export default function AdminLogin() {
           </div>
         </form>
 
-        <p className="auth-footer-text">
-          Demo: admin@snapdent.com / admin123
-        </p>
-
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
           <a href="/vendor/login" style={{ color: 'var(--secondary, #0d9488)', fontWeight: 600, textDecoration: 'none' }}>Vendor Portal Login &rarr;</a>
           <a href="/" style={{ color: '#64748b', textDecoration: 'none' }}>&larr; Back to Store</a>
