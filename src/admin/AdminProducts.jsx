@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore, updateStore } from '../store';
 import Papa from 'papaparse';
 import { createProduct, updateProduct, deleteProduct, bulkUploadProducts } from '../api/products';
+import { API_URL } from '../api/client';
 import { loadStoreFromAPI } from '../store';
 
 export default function AdminProducts() {
@@ -174,7 +175,6 @@ export default function AdminProducts() {
 
     try {
       const token = localStorage.getItem('snapdent_token') || localStorage.getItem('token');
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const res = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         headers: {

@@ -1,4 +1,17 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+/**
+ * Normalizes the API base URL to ensure it always targets the '/api' prefix
+ * and avoids duplicate or missing slashes.
+ */
+const normalizeApiBaseUrl = () => {
+  let url = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').trim();
+  url = url.replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return url;
+};
+
+export const API_URL = normalizeApiBaseUrl();
 
 /**
  * Base API client with JWT interceptor.
@@ -20,8 +33,15 @@ const api = async (endpoint, options = {}) => {
     delete config.headers['Content-Type'];
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, config);
-  const data = await response.json();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const response = await fetch(`${API_URL}${cleanEndpoint}`, config);
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (parseError) {
+    data = { error: response.statusText || 'Unexpected server response' };
+  }
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -46,7 +66,8 @@ export const upload = (endpoint, formData) => api(endpoint, { method: 'POST', bo
 
 export const getBlob = async (endpoint) => {
   const token = localStorage.getItem('snapdent_token');
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const response = await fetch(`${API_URL}${cleanEndpoint}`, {
     method: 'GET',
     headers: {
       ...(token && { Authorization: `Bearer ${token}` }),

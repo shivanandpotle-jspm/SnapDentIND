@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import CheckoutStepper from '../components/CheckoutStepper';
-import { getOrder } from '../api/orders';
+import { getOrder, downloadInvoice } from '../api/orders';
 import './Checkout.css';
 
 export default function OrderSuccess() {
@@ -57,12 +57,7 @@ export default function OrderSuccess() {
 
         <div className="order-success-actions" style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <button onClick={() => {
-            const token = localStorage.getItem('snapdent_token');
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-            fetch(`${apiUrl}/orders/${order._id}/invoice`, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
-            .then(res => res.blob())
+            downloadInvoice(order._id)
             .then(blob => {
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement('a');

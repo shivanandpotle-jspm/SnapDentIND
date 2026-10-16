@@ -59,7 +59,7 @@ const limiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
 });
-app.use('/api/', limiter);
+app.use(['/api/', '/'], limiter);
 
 // Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
@@ -67,17 +67,13 @@ const authLimiter = rateLimit({
   max: 25,
   message: { error: 'Too many authentication attempts, please try again later.' },
 });
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/api/auth/forgot-password', authLimiter);
+app.use(['/api/auth/login', '/auth/login'], authLimiter);
+app.use(['/api/auth/register', '/auth/register'], authLimiter);
+app.use(['/api/auth/forgot-password', '/auth/forgot-password'], authLimiter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-
-
-
 
 // Logging
 if (process.env.NODE_ENV !== 'production') {
@@ -87,16 +83,25 @@ if (process.env.NODE_ENV !== 'production') {
 // Serve static files
 app.use('/uploads', express.static('public/uploads'));
 
-// Health check
-app.get('/api/health', (req, res) => {
+// Health check & Server Status
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get(['/', '/api'], (req, res) => {
+  res.json({
+    name: 'SnapDent India API',
+    status: 'online',
+    version: '1.0.0',
+    documentation: '/api/health',
+  });
 });
 
 import { upload } from './middleware/upload.js';
 import { uploadToDrive } from './config/gdrive.js';
 
 // Generic Upload Route
-app.post('/api/upload', upload.single('image'), async (req, res) => {
+app.post(['/api/upload', '/upload'], upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
   try {
     const { url, driveFileId } = await uploadToDrive(req.file.buffer, req.file.originalname, req.file.mimetype);
@@ -106,16 +111,23 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
   }
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/discounts', discountRoutes);
-app.use('/api/contact', contactRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/admin/vendors', vendorRoutes);
+// API Routes (mounted on both /api/* and /* for full compatibility)
+const routes = [
+  ['/auth', authRoutes],
+  ['/products', productRoutes],
+  ['/categories', categoryRoutes],
+  ['/orders', orderRoutes],
+  ['/cart', cartRoutes],
+  ['/discounts', discountRoutes],
+  ['/contact', contactRoutes],
+  ['/admin', adminRoutes],
+  ['/admin/vendors', vendorRoutes],
+];
+
+routes.forEach(([path, router]) => {
+  app.use(`/api${path}`, router);
+  app.use(path, router);
+});
 
 // Error handling
 app.use(notFound);
