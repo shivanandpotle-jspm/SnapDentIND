@@ -27,8 +27,31 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 // CORS
+const allowedOrigins = [
+  'https://snapdent.in',
+  'https://www.snapdent.in',
+  'https://snapdent-frontend.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((url) => url.trim()) : []),
+];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: (origin, callback) => {
+    // Allow server-to-server, curl, Postman, or requests without origin
+    if (!origin) return callback(null, true);
+    
+    // Allow exact matches or subdomains of snapdent.in / onrender.com
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.snapdent.in') ||
+      origin.endsWith('.onrender.com')
+    ) {
+      return callback(null, true);
+    }
+
+    callback(new Error(`CORS policy does not allow access from origin ${origin}`));
+  },
   credentials: true,
 }));
 
