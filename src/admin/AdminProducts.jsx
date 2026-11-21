@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore, updateStore } from '../store';
 import Papa from 'papaparse';
 import { createProduct, updateProduct, deleteProduct, bulkUploadProducts } from '../api/products';
+import { upload } from '../api/client';
 import { loadStoreFromAPI } from '../store';
 
 export default function AdminProducts() {
@@ -80,7 +81,7 @@ export default function AdminProducts() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
@@ -90,77 +91,59 @@ export default function AdminProducts() {
     const prodImage = form.image?.trim() || `https://placehold.co/400x400/f8fafc/1A3673?text=${encodeURIComponent(form.name)}`;
 
     if (editId) {
-      const updated = productList.map(p =>
-        String(p.id) === String(editId)
-          ? {
-              ...p,
-              ...form,
-              id: editId,
-              price: prodPrice,
-              discountPrice: prodDiscountPrice,
-              stock: prodStock,
-              image: prodImage,
-              inStock: form.status === 'Active'
-            }
-          : p
-      );
-      setProductList(updated);
-      updateStore('products', updated);
-      showToast('Product updated successfully!', 'success');
-
-      updateProduct(editId, {
-        name: form.name,
-        category: form.category,
-        subcategory: form.subcategory,
-        price: prodPrice,
-        discountPrice: prodDiscountPrice,
-        description: form.description,
-        material: form.material,
-        stock: prodStock,
-        badge: form.badge || null,
-        isFeatured: form.featured,
-        images: [{ url: prodImage }],
-      }).catch(err => console.warn('Backend sync skipped:', err.message));
+      try {
+        await updateProduct(editId, {
+          name: form.name,
+          category: form.category,
+          subcategory: form.subcategory,
+          price: prodPrice,
+          discountPrice: prodDiscountPrice,
+          description: form.description,
+          material: form.material,
+          stock: prodStock,
+          badge: form.badge || '',
+          isFeatured: form.featured,
+          image: prodImage,
+          images: [{ url: prodImage }],
+        });
+        showToast('Product updated successfully!', 'success');
+        await loadStoreFromAPI();
+      } catch (err) {
+        showToast('Failed to update product: ' + err.message, 'error');
+      }
     } else {
-      const newProduct = {
-        ...form,
-        id: Date.now().toString(),
-        price: prodPrice,
-        discountPrice: prodDiscountPrice,
-        stock: prodStock,
-        image: prodImage,
-        inStock: form.status === 'Active',
-        visible: form.visible !== false,
-      };
-      const updated = [newProduct, ...productList];
-      setProductList(updated);
-      updateStore('products', updated);
-      showToast('Product added successfully!', 'success');
-
-      createProduct({
-        name: form.name,
-        category: form.category,
-        subcategory: form.subcategory,
-        price: prodPrice,
-        discountPrice: prodDiscountPrice,
-        description: form.description,
-        material: form.material,
-        stock: prodStock,
-        badge: form.badge || null,
-        isFeatured: form.featured,
-        images: [{ url: prodImage }],
-      }).catch(err => console.warn('Backend sync skipped:', err.message));
+      try {
+        await createProduct({
+          name: form.name,
+          category: form.category,
+          subcategory: form.subcategory,
+          price: prodPrice,
+          discountPrice: prodDiscountPrice,
+          description: form.description,
+          material: form.material,
+          stock: prodStock,
+          badge: form.badge || '',
+          isFeatured: form.featured,
+          image: prodImage,
+          images: [{ url: prodImage }],
+        });
+        showToast('Product added successfully!', 'success');
+        await loadStoreFromAPI();
+      } catch (err) {
+        showToast('Failed to add product: ' + err.message, 'error');
+      }
     }
     setShowForm(false);
   };
 
-  const handleDelete = () => {
-    const updated = productList.filter(p => String(p.id) !== String(deleteTarget.id));
-    setProductList(updated);
-    updateStore('products', updated);
-    
-    showToast(`Product "${deleteTarget.name}" deleted`, 'success');
-    deleteProduct(deleteTarget.id).catch(err => console.warn('Backend delete skipped:', err.message));
+  const handleDelete = async () => {
+    try {
+      await deleteProduct(deleteTarget.id);
+      showToast(`Product "${deleteTarget.name}" deleted`, 'success');
+      await loadStoreFromAPI();
+    } catch (err) {
+      showToast('Failed to delete product: ' + err.message, 'error');
+    }
     setDeleteTarget(null);
   };
 
@@ -173,24 +156,15 @@ export default function AdminProducts() {
     formData.append('image', file);
 
     try {
-      const token = localStorage.getItem('snapdent_token') || localStorage.getItem('token');
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${API_URL}/upload`, {
-        method: 'POST',
-        headers: {
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success) {
-        setForm({ ...form, image: data.url });
+      const data = await upload('/upload', formData);
+      if (data && data.url) {
+        setForm(prev => ({ ...prev, image: data.url }));
         showToast('Image uploaded successfully', 'success');
       } else {
-        showToast(data.error || 'Upload failed', 'error');
+        showToast(data?.error || 'Upload failed', 'error');
       }
     } catch (err) {
-      showToast('Error uploading image', 'error');
+      showToast('Error uploading image: ' + err.message, 'error');
     } finally {
       setIsUploading(false);
     }

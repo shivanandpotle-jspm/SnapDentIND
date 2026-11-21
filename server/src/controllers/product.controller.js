@@ -72,27 +72,29 @@ export const createProduct = async (req, res, next) => {
   try {
     const {
       name, category, subcategory, price, discountPrice,
-      description, material, sku, stock, badge, isVisible, isFeatured, image,
+      description, material, sku, stock, badge, isVisible, isFeatured, image, images,
     } = req.body;
 
     const productData = {
       name, category, subcategory, price: Number(price),
-      description, material, sku,
+      description, material,
       stock: stock ? Number(stock) : 50,
       badge: badge || '',
       isVisible: isVisible !== false,
       isFeatured: isFeatured === true,
     };
 
+    if (sku) productData.sku = sku;
     if (discountPrice) productData.discountPrice = Number(discountPrice);
 
-    // If an image URL is provided directly (for seeding/placeholder purposes)
-    if (image) {
-      productData.images = [{ url: image, driveFileId: '' }];
+    if (images && Array.isArray(images) && images.length > 0) {
+      productData.images = images.map(img => typeof img === 'string' ? { url: img } : img);
+    } else if (image) {
+      productData.images = [{ url: image }];
     }
 
     // Set vendor ownership
-    if (req.user.role === 'vendor') {
+    if (req.user && req.user.role === 'vendor') {
       productData.vendorId = req.user._id;
     }
 
@@ -111,7 +113,7 @@ export const updateProduct = async (req, res, next) => {
   try {
     const {
       name, category, subcategory, price, discountPrice,
-      description, material, sku, stock, badge, inStock, isVisible, isFeatured,
+      description, material, sku, stock, badge, inStock, isVisible, isFeatured, image, images,
     } = req.body;
 
     const product = await Product.findById(req.params.id);
@@ -137,6 +139,12 @@ export const updateProduct = async (req, res, next) => {
     if (inStock !== undefined) product.inStock = inStock;
     if (isVisible !== undefined) product.isVisible = isVisible;
     if (isFeatured !== undefined) product.isFeatured = isFeatured;
+
+    if (images && Array.isArray(images) && images.length > 0) {
+      product.images = images.map(img => typeof img === 'string' ? { url: img } : img);
+    } else if (image !== undefined) {
+      product.images = image ? [{ url: image }] : [];
+    }
 
     await product.save();
 

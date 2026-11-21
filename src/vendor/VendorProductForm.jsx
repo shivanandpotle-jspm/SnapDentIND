@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getProduct, createProduct, updateProduct } from '../api/products';
+import { upload } from '../api/client';
 
 const CATEGORIES = [
   'Equipment',
@@ -73,20 +74,11 @@ export default function VendorProductForm() {
     formData.append('image', file);
 
     try {
-      const token = localStorage.getItem('snapdent_token');
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${API_URL}/upload`, {
-        method: 'POST',
-        headers: {
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success && data.url) {
+      const data = await upload('/upload', formData);
+      if (data && data.url) {
         setForm(prev => ({ ...prev, image: data.url }));
       } else {
-        throw new Error(data.error || 'Failed to upload image');
+        throw new Error(data?.error || 'Failed to upload image');
       }
     } catch (err) {
       setError(err.message || 'Image upload failed. You can also paste an image URL.');
