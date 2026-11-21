@@ -90,21 +90,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Innovation */}
-      <section className="section-gap container-max">
-        <div className="featured-section">
-          <div className="featured-content">
-            <span className="featured-label">Featured Innovation</span>
-            <h3 className="featured-title">Anatomic Healing Abutment</h3>
-            <p className="featured-desc">Create a natural gum contour, support inter-dental papilla formation, and improve aesthetic outcomes with our precision-engineered anatomic healing abutments.</p>
-            <Link to="/shop" className="btn btn-primary">DISCOVER MORE</Link>
+      {/* Featured Innovation / Promo Banners */}
+      {store.banners && store.banners.filter(b => b.status === 'Active').map(banner => (
+        <section key={banner.id} className="section-gap container-max">
+          <div className="featured-section">
+            <div className="featured-content">
+              <span className="featured-label">{banner.tag || 'Featured Innovation'}</span>
+              <h3 className="featured-title">{banner.title}</h3>
+              <p className="featured-desc">{banner.description}</p>
+              <Link to={banner.link || '/shop'} className="btn btn-primary">
+                {banner.buttonText || 'DISCOVER MORE'}
+              </Link>
+            </div>
+            <div className="featured-visual">
+              <img src={banner.image || heroImages.featured} alt={banner.title} className="animate-float" />
+              <div className="featured-glow" />
+            </div>
           </div>
-          <div className="featured-visual">
-            <img src={heroImages.featured} alt="Anatomic Healing Abutment" className="animate-float" />
-            <div className="featured-glow" />
-          </div>
-        </div>
-      </section>
+        </section>
+      ))}
 
       {/* Product Grid */}
       <section className="products-section section-gap">

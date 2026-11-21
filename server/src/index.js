@@ -19,6 +19,7 @@ import discountRoutes from './routes/discount.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import vendorRoutes from './routes/vendor.routes.js';
+import bannerRoutes from './routes/banner.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -127,6 +128,7 @@ const routes = [
   ['/admin', adminRoutes],
   ['/admin/vendors', vendorRoutes],
   ['/vendor', vendorRoutes],
+  ['/banners', bannerRoutes],
 ];
 
 routes.forEach(([routePath, router]) => {

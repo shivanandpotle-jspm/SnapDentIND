@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: 'Products', icon: 'inventory_2', path: '/admin/products' },
   { label: 'Inventory', icon: 'warehouse', path: '/admin/inventory' },
   { label: 'Discounts & Offers', icon: 'sell', path: '/admin/discounts' },
+  { label: 'Promotional Banners', icon: 'ad_units', path: '/admin/banners' },
   { section: 'Sales & Users' },
   { label: 'Orders', icon: 'receipt_long', path: '/admin/orders' },
   { label: 'Customers', icon: 'group', path: '/admin/customers' },

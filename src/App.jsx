@@ -27,6 +27,7 @@ import AdminDashboard from './admin/AdminDashboard';
 import AdminProducts from './admin/AdminProducts';
 import AdminInventory from './admin/AdminInventory';
 import AdminDiscounts from './admin/AdminDiscounts';
+import AdminBanners from './admin/AdminBanners';
 import AdminOrders from './admin/AdminOrders';
 import AdminCustomers from './admin/AdminCustomers';
 import AdminMessages from './admin/AdminMessages';
@@ -80,6 +81,7 @@ function AppContent() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="inventory" element={<AdminInventory />} />
           <Route path="discounts" element={<AdminDiscounts />} />
+          <Route path="banners" element={<AdminBanners />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="vendors" element={<AdminVendors />} />

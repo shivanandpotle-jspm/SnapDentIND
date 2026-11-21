@@ -33,9 +33,23 @@ const loadLocalCategories = () => {
   return categoryTree || [];
 };
 
+const defaultBanners = [
+  {
+    id: 'default-1',
+    tag: 'FEATURED INNOVATION',
+    title: 'Anatomic Healing Abutment',
+    description: 'Create a natural gum contour, support inter-dental papilla formation, and improve aesthetic outcomes with our precision-engineered anatomic healing abutments.',
+    buttonText: 'DISCOVER MORE',
+    link: '/shop',
+    image: '/images/hero_featured.jpg',
+    status: 'Active',
+  }
+];
+
 const store = {
   products: loadLocalProducts(),
   categories: loadLocalCategories(),
+  banners: defaultBanners,
   orders: [],
   cart: [],
   discounts: [],
@@ -85,7 +99,7 @@ const listeners = new Set();
 export const updateStore = (key, data) => {
   store[key] = data;
   try {
-    if (key === 'products' || key === 'categories' || key === 'discounts' || key === 'cart') {
+    if (key === 'products' || key === 'categories' || key === 'discounts' || key === 'cart' || key === 'banners') {
       localStorage.setItem(`snapdent_${key}`, JSON.stringify(data));
     }
   } catch (e) {
@@ -99,10 +113,11 @@ export const updateStore = (key, data) => {
  */
 export const loadStoreFromAPI = async () => {
   try {
-    const [productsRes, categoriesRes, discountsRes] = await Promise.all([
+    const [productsRes, categoriesRes, discountsRes, bannersRes] = await Promise.all([
       get('/products?limit=200'),
       get('/categories'),
       get('/discounts'),
+      get('/banners').catch(() => ({ banners: [] })),
     ]);
 
     // Map API products to the format the frontend expects
@@ -139,6 +154,9 @@ export const loadStoreFromAPI = async () => {
     store.products = mappedProducts;
     store.categories = mappedCategories;
     store.discounts = discountsRes.discounts || [];
+    if (bannersRes?.banners && bannersRes.banners.length > 0) {
+      store.banners = bannersRes.banners;
+    }
     store.loaded = true;
     try {
       localStorage.setItem('snapdent_products', JSON.stringify(mappedProducts));
