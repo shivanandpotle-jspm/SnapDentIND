@@ -28,14 +28,15 @@ export default function Footer() {
           </div>
           <div className="footer__link-group">
             <h4 className="footer__link-title">Support</h4>
-            <a href="#" className="footer__link">Shipping Info</a>
-            <a href="#" className="footer__link">Returns</a>
-            <a href="#" className="footer__link">FAQ</a>
+            <Link to="/shipping-policy" className="footer__link">Shipping & Delivery</Link>
+            <Link to="/cancellation-refund-policy" className="footer__link">Cancellation & Refunds</Link>
+            <Link to="/contact" className="footer__link">Help Center</Link>
           </div>
           <div className="footer__link-group">
             <h4 className="footer__link-title">Legal</h4>
             <Link to="/privacy-policy" className="footer__link">Privacy Policy</Link>
-            <Link to="/terms-of-service" className="footer__link">Terms of Service</Link>
+            <Link to="/terms-of-service" className="footer__link">Terms & Conditions</Link>
+            <Link to="/cancellation-refund-policy" className="footer__link">Refund Policy</Link>
           </div>
           <div className="footer__link-group">
             <h4 className="footer__link-title">Portals</h4>
