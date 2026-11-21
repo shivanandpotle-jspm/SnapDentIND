@@ -74,14 +74,14 @@ app.get('/api/health', (req, res) => {
 });
 
 import { upload } from './middleware/upload.js';
-import { uploadToDrive } from './config/gdrive.js';
+import { uploadToCloudinary } from './config/cloudinary.js';
 
 // Generic Upload Route
 app.post('/api/upload', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
   try {
-    const { url, driveFileId } = await uploadToDrive(req.file.buffer, req.file.originalname, req.file.mimetype);
-    res.json({ success: true, url, driveFileId });
+    const { url, publicId } = await uploadToCloudinary(req.file.buffer, req.file.originalname, req.file.mimetype);
+    res.json({ success: true, url, publicId });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

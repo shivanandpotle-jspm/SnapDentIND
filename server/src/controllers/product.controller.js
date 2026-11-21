@@ -1,7 +1,5 @@
 import Product from '../models/Product.js';
-import fs from 'fs';
-import path from 'path';
-import { uploadToDrive, deleteFromDrive } from '../config/gdrive.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
 
 /**
  * GET /api/products — List products with search, filter, pagination, sort
@@ -163,16 +161,10 @@ export const deleteProduct = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'You are not authorized to delete this product.' });
     }
 
-    // Delete images from Google Drive and local storage fallback
+    // Delete images from Cloudinary
     for (const img of product.images) {
-      if (img.driveFileId) {
-        await deleteFromDrive(img.driveFileId);
-      } else if (img.url && img.url.includes('/uploads/')) {
-        const filename = img.url.split('/uploads/')[1];
-        const filepath = path.resolve('public/uploads', filename);
-        if (fs.existsSync(filepath)) {
-          fs.unlinkSync(filepath);
-        }
+      if (img.publicId) {
+        await deleteFromCloudinary(img.publicId);
       }
     }
 
@@ -185,7 +177,7 @@ export const deleteProduct = async (req, res, next) => {
 };
 
 /**
- * POST /api/products/:id/images — Upload product images to Google Drive (Admin)
+ * POST /api/products/:id/images — Upload product images to Cloudinary (Admin)
  */
 export const uploadProductImages = async (req, res, next) => {
   try {
@@ -205,8 +197,8 @@ export const uploadProductImages = async (req, res, next) => {
 
     const uploadedImages = [];
     for (const file of req.files) {
-      const { url, driveFileId } = await uploadToDrive(file.buffer, file.originalname, file.mimetype);
-      uploadedImages.push({ url, driveFileId });
+      const { url, publicId } = await uploadToCloudinary(file.buffer, file.originalname, file.mimetype);
+      uploadedImages.push({ url, publicId });
     }
 
     product.images.push(...uploadedImages);
