@@ -24,6 +24,9 @@ import bannerRoutes from './routes/banner.routes.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxy (essential for Render to identify individual client IPs)
+app.set('trust proxy', 1);
+
 // Security
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
@@ -59,17 +62,17 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 5000, // Generous limit for normal API usage, browsing & admin catalog management
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use(['/api/', '/'], limiter);
 
-// Stricter rate limit for auth endpoints
+// Stricter rate limit for auth endpoints to prevent brute-force
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 25,
+  max: 100,
   message: { error: 'Too many authentication attempts, please try again later.' },
 });
 app.use(['/api/auth/login', '/auth/login'], authLimiter);

@@ -30,6 +30,7 @@ export default function AdminCategories() {
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const emptyForm = {
     name: '',
@@ -41,24 +42,6 @@ export default function AdminCategories() {
   const [form, setForm] = useState(emptyForm);
   const [subInput, setSubInput] = useState('');
   const [formErrors, setFormErrors] = useState({});
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    setLoading(true);
-    try {
-      const res = await getCategories();
-      if (res?.categories) {
-        updateStore('categories', res.categories);
-      }
-    } catch (err) {
-      console.warn('Categories API fetch error:', err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -117,8 +100,9 @@ export default function AdminCategories() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate() || saving) return;
 
+    setSaving(true);
     try {
       const payload = {
         name: form.name.trim(),
@@ -140,6 +124,8 @@ export default function AdminCategories() {
       await loadStoreFromAPI();
     } catch (err) {
       showToast(err.message || 'Error saving category', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -409,11 +395,11 @@ export default function AdminCategories() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--admin-border-light)' }}>
-                  <button type="submit" className="admin-btn admin-btn--primary" style={{ flex: 1 }}>
-                    <span className="material-symbols-outlined">{editId ? 'save' : 'check'}</span>
-                    {editId ? 'Save Changes' : 'Create Category'}
+                  <button type="submit" className="admin-btn admin-btn--primary" style={{ flex: 1 }} disabled={saving}>
+                    <span className="material-symbols-outlined">{saving ? 'hourglass_top' : editId ? 'save' : 'check'}</span>
+                    {saving ? 'Saving...' : editId ? 'Save Changes' : 'Create Category'}
                   </button>
-                  <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setShowForm(false)}>
+                  <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setShowForm(false)} disabled={saving}>
                     Cancel
                   </button>
                 </div>

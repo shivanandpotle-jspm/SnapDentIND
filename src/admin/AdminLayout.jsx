@@ -41,7 +41,7 @@ export default function AdminLayout() {
         }
       })
       .catch(() => {});
-  }, [location.pathname]);
+  }, []);
 
   if (loading) return null;
 
