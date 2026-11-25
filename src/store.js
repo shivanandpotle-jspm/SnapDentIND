@@ -46,10 +46,23 @@ const defaultBanners = [
   }
 ];
 
+const loadLocalBanners = () => {
+  try {
+    const saved = localStorage.getItem('snapdent_banners');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Error loading snapdent_banners', e);
+  }
+  return defaultBanners;
+};
+
 const store = {
   products: loadLocalProducts(),
   categories: loadLocalCategories(),
-  banners: defaultBanners,
+  banners: loadLocalBanners(),
   orders: [],
   cart: [],
   discounts: [],
@@ -109,6 +122,53 @@ export const updateStore = (key, data) => {
 };
 
 /**
+ * Fetch only categories from API for fast sub-200ms updates
+ */
+export const loadCategoriesFromAPI = async () => {
+  try {
+    const res = await get('/categories');
+    if (res?.categories) {
+      const mapped = res.categories.map(c => ({
+        id: c._id || c.id,
+        name: c.name,
+        slug: c.slug,
+        icon: c.icon,
+        description: c.description,
+        color: c.color,
+        items: c.items,
+      }));
+      store.categories = mapped;
+      try {
+        localStorage.setItem('snapdent_categories', JSON.stringify(mapped));
+      } catch (e) {}
+      listeners.forEach(l => l());
+      return mapped;
+    }
+  } catch (e) {
+    console.warn('Error fetching categories:', e.message);
+  }
+};
+
+/**
+ * Fetch only banners from API for fast sub-200ms updates
+ */
+export const loadBannersFromAPI = async () => {
+  try {
+    const res = await get('/banners');
+    if (res?.banners) {
+      store.banners = res.banners;
+      try {
+        localStorage.setItem('snapdent_banners', JSON.stringify(res.banners));
+      } catch (e) {}
+      listeners.forEach(l => l());
+      return res.banners;
+    }
+  } catch (e) {
+    console.warn('Error fetching banners:', e.message);
+  }
+};
+
+/**
  * Fetch products and categories from the API and populate the store.
  */
 export const loadStoreFromAPI = async () => {
@@ -161,6 +221,9 @@ export const loadStoreFromAPI = async () => {
     try {
       localStorage.setItem('snapdent_products', JSON.stringify(mappedProducts));
       localStorage.setItem('snapdent_categories', JSON.stringify(mappedCategories));
+      if (bannersRes?.banners && bannersRes.banners.length > 0) {
+        localStorage.setItem('snapdent_banners', JSON.stringify(bannersRes.banners));
+      }
     } catch (e) {}
     listeners.forEach(l => l());
   } catch (error) {

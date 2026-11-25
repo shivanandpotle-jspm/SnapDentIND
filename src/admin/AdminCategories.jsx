@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useStore, updateStore, loadStoreFromAPI } from '../store';
+import { useState } from 'react';
+import { useStore, updateStore, loadStoreFromAPI, loadCategoriesFromAPI } from '../store';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../api/categories';
 
 const PRESET_ICONS = [
@@ -24,7 +24,7 @@ const PRESET_COLORS = [
 export default function AdminCategories() {
   const store = useStore();
   const categories = store.categories || [];
-  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -121,7 +121,7 @@ export default function AdminCategories() {
       }
 
       setShowForm(false);
-      await loadStoreFromAPI();
+      await loadCategoriesFromAPI();
     } catch (err) {
       showToast(err.message || 'Error saving category', 'error');
     } finally {
@@ -135,10 +135,17 @@ export default function AdminCategories() {
       await deleteCategory(deleteTarget.id || deleteTarget._id);
       showToast(`Category "${deleteTarget.name}" deleted successfully`, 'success');
       setDeleteTarget(null);
-      await loadStoreFromAPI();
+      await loadCategoriesFromAPI();
     } catch (err) {
       showToast(err.message || 'Failed to delete category', 'error');
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadCategoriesFromAPI();
+    setRefreshing(false);
+    showToast('Categories synced with database', 'success');
   };
 
   const filteredCategories = categories.filter(c =>
@@ -427,9 +434,29 @@ export default function AdminCategories() {
           <h1>Product Categories</h1>
           <p>Organize categories and subcategories synced across the website and product forms</p>
         </div>
-        <button className="admin-btn admin-btn--primary" onClick={openAdd}>
-          <span className="material-symbols-outlined">add_circle</span> New Category
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            className="admin-btn admin-btn--secondary"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Sync with database"
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: 18,
+                transition: 'transform 0.5s ease',
+                transform: refreshing ? 'rotate(360deg)' : 'none'
+              }}
+            >
+              sync
+            </span>
+            {refreshing ? 'Syncing...' : 'Sync'}
+          </button>
+          <button className="admin-btn admin-btn--primary" onClick={openAdd}>
+            <span className="material-symbols-outlined">add_circle</span> New Category
+          </button>
+        </div>
       </div>
 
       <div className="admin-table-wrap">
@@ -453,9 +480,12 @@ export default function AdminCategories() {
           </div>
         </div>
 
-        {loading ? (
+        {!store.loaded && categories.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: '#64748b' }}>
-            Loading categories from database...
+            <span className="material-symbols-outlined" style={{ fontSize: 32, color: 'var(--admin-blue)', marginBottom: 8 }}>
+              sync
+            </span>
+            <p style={{ margin: 0, fontSize: 14 }}>Connecting to database...</p>
           </div>
         ) : filteredCategories.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: '#64748b' }}>

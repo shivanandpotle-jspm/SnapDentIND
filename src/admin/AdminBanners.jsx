@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore, updateStore, loadStoreFromAPI } from '../store';
+import { useStore, updateStore, loadBannersFromAPI } from '../store';
 import { getBanners, createBanner, updateBanner, deleteBanner } from '../api/banners';
 import { upload } from '../api/client';
 
@@ -11,6 +11,8 @@ export default function AdminBanners() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const emptyForm = {
     tag: 'FEATURED INNOVATION',
@@ -95,8 +97,9 @@ export default function AdminBanners() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate() || saving) return;
 
+    setSaving(true);
     try {
       if (editId) {
         const { banner } = await updateBanner(editId, form);
@@ -110,9 +113,11 @@ export default function AdminBanners() {
         showToast('Banner published successfully!', 'success');
       }
       setShowForm(false);
-      loadStoreFromAPI();
+      await loadBannersFromAPI();
     } catch (err) {
       showToast(err.message || 'Error saving banner', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -136,9 +141,17 @@ export default function AdminBanners() {
       updateStore('banners', updated);
       showToast('Banner deleted successfully', 'success');
       setDeleteTarget(null);
+      await loadBannersFromAPI();
     } catch (err) {
       showToast(err.message || 'Failed to delete banner', 'error');
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadBannersFromAPI();
+    setRefreshing(false);
+    showToast('Banners synced with database', 'success');
   };
 
   // Full page edit/create form matching AdminProducts & AdminDiscounts design
@@ -379,11 +392,11 @@ export default function AdminBanners() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--admin-border-light)' }}>
-                  <button type="submit" className="admin-btn admin-btn--primary" style={{ flex: 1 }}>
-                    <span className="material-symbols-outlined">{editId ? 'save' : 'publish'}</span>
-                    {editId ? 'Save Changes' : 'Publish Banner'}
+                  <button type="submit" className="admin-btn admin-btn--primary" style={{ flex: 1 }} disabled={saving}>
+                    <span className="material-symbols-outlined">{saving ? 'sync' : editId ? 'save' : 'publish'}</span>
+                    {saving ? 'Saving...' : editId ? 'Save Changes' : 'Publish Banner'}
                   </button>
-                  <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setShowForm(false)}>
+                  <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setShowForm(false)} disabled={saving}>
                     Cancel
                   </button>
                 </div>
@@ -411,9 +424,29 @@ export default function AdminBanners() {
           <h1>Special Offers & Promos</h1>
           <p>Manage promotional showcase banners displayed on the homepage</p>
         </div>
-        <button className="admin-btn admin-btn--primary" onClick={openAdd}>
-          <span className="material-symbols-outlined">add_photo_alternate</span> Add Promo Banner
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            className="admin-btn admin-btn--secondary"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Sync with database"
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: 18,
+                transition: 'transform 0.5s ease',
+                transform: refreshing ? 'rotate(360deg)' : 'none'
+              }}
+            >
+              sync
+            </span>
+            {refreshing ? 'Syncing...' : 'Sync'}
+          </button>
+          <button className="admin-btn admin-btn--primary" onClick={openAdd}>
+            <span className="material-symbols-outlined">add_photo_alternate</span> Add Promo Banner
+          </button>
+        </div>
       </div>
 
       <div className="admin-table-wrap">
