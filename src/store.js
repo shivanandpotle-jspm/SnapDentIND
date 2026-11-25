@@ -181,24 +181,32 @@ export const loadStoreFromAPI = async () => {
     ]);
 
     // Map API products to the format the frontend expects
-    const mappedProducts = productsRes.products.map(p => ({
-      id: p._id,
-      name: p.name,
-      slug: p.slug,
-      category: p.category,
-      subcategory: p.subcategory || '',
-      price: p.discountPrice || p.price,
-      originalPrice: p.price,
-      description: p.description,
-      image: p.images?.[0]?.url || 'https://placehold.co/400x400/f8fafc/1A3673?text=Product',
-      badge: p.badge || null,
-      material: p.material || '',
-      inStock: p.inStock,
-      stock: p.stock,
-      sku: p.sku,
-      isFeatured: p.isFeatured,
-      vendor: p.vendorId ? { id: p.vendorId._id, name: p.vendorId.name, companyName: p.vendorId.companyName } : null,
-    }));
+    const mappedProducts = productsRes.products.map(p => {
+      const imgList = (p.images && p.images.length > 0)
+        ? p.images.map(img => (typeof img === 'string' ? img : img.url)).filter(Boolean)
+        : (p.image ? [p.image] : []);
+      const primaryImg = imgList[0] || p.image || 'https://placehold.co/400x400/f8fafc/1A3673?text=Product';
+
+      return {
+        id: p._id,
+        name: p.name,
+        slug: p.slug,
+        category: p.category,
+        subcategory: p.subcategory || '',
+        price: p.discountPrice || p.price,
+        originalPrice: p.price,
+        description: p.description,
+        image: primaryImg,
+        images: imgList.length > 0 ? imgList : [primaryImg],
+        badge: p.badge || null,
+        material: p.material || '',
+        inStock: p.inStock,
+        stock: p.stock,
+        sku: p.sku,
+        isFeatured: p.isFeatured,
+        vendor: p.vendorId ? { id: p.vendorId._id, name: p.vendorId.name, companyName: p.vendorId.companyName } : null,
+      };
+    });
 
     // Map API categories to the format the frontend expects
     const mappedCategories = categoriesRes.categories.map(c => ({

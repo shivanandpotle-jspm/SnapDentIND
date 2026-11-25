@@ -108,12 +108,24 @@ app.get(['/', '/api'], (req, res) => {
 import { upload } from './middleware/upload.js';
 import { uploadToCloudinary } from './config/cloudinary.js';
 
-// Generic Upload Route
+// Generic Upload Routes (Single & Multiple)
 app.post(['/api/upload', '/upload'], upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
   try {
     const { url, publicId } = await uploadToCloudinary(req.file.buffer, req.file.originalname, req.file.mimetype);
     res.json({ success: true, url, publicId });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post(['/api/upload-multiple', '/upload-multiple'], upload.array('images', 10), async (req, res) => {
+  if (!req.files || req.files.length === 0) return res.status(400).json({ success: false, error: 'No files uploaded' });
+  try {
+    const results = await Promise.all(
+      req.files.map(file => uploadToCloudinary(file.buffer, file.originalname, file.mimetype))
+    );
+    res.json({ success: true, urls: results.map(r => r.url), files: results });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

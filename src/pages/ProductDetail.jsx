@@ -17,12 +17,14 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('');
   const [activeTab, setActiveTab] = useState('description');
   const [added, setAdded] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     const found = products.find(p => String(p.id) === String(id));
     if (found) {
       setProduct(found);
+      setActiveImageIndex(0);
     } else {
       if (products.length > 0) {
         navigate('/shop');
@@ -33,6 +35,21 @@ export default function ProductDetail() {
   if (!product) {
     return <div className="product-detail-loading">Loading product details...</div>;
   }
+
+  const productImages = (product.images && product.images.length > 0)
+    ? product.images.map(img => (typeof img === 'string' ? img : img.url)).filter(Boolean)
+    : (product.image ? [product.image] : []);
+  const currentImage = productImages[activeImageIndex] || product.image;
+
+  const nextImage = () => {
+    if (productImages.length <= 1) return;
+    setActiveImageIndex(prev => (prev + 1) % productImages.length);
+  };
+
+  const prevImage = () => {
+    if (productImages.length <= 1) return;
+    setActiveImageIndex(prev => (prev - 1 + productImages.length) % productImages.length);
+  };
 
   // Mock sizes based on category
   let mockSizes = [];
@@ -97,9 +114,61 @@ export default function ProductDetail() {
       <div className="product-detail-grid">
         <div className="product-detail-image-col">
           <div className="product-detail-image-wrap">
-            <img src={product.image} alt={product.name} />
+            <img 
+              src={currentImage} 
+              alt={`${product.name} - Photo ${activeImageIndex + 1}`} 
+              key={currentImage}
+              className="product-detail-main-img"
+            />
             {product.badge && <span className="product-detail-badge">{product.badge}</span>}
+
+            {/* Photo Counter */}
+            {productImages.length > 1 && (
+              <span className="product-image-counter">
+                {activeImageIndex + 1} / {productImages.length}
+              </span>
+            )}
+
+            {/* Previous / Next Arrow Controls */}
+            {productImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="product-image-nav product-image-nav--prev"
+                  onClick={prevImage}
+                  aria-label="Previous image"
+                >
+                  <span className="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button
+                  type="button"
+                  className="product-image-nav product-image-nav--next"
+                  onClick={nextImage}
+                  aria-label="Next image"
+                >
+                  <span className="material-symbols-outlined">chevron_right</span>
+                </button>
+              </>
+            )}
           </div>
+
+          {/* Multiple Photo Thumbnails Row */}
+          {productImages.length > 1 && (
+            <div className="product-detail-thumbnails">
+              {productImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`product-detail-thumb ${idx === activeImageIndex ? 'product-detail-thumb--active' : ''}`}
+                  onClick={() => setActiveImageIndex(idx)}
+                  onMouseEnter={() => setActiveImageIndex(idx)}
+                  title={`View photo ${idx + 1}`}
+                >
+                  <img src={img} alt={`${product.name} thumbnail ${idx + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="product-detail-info-col">

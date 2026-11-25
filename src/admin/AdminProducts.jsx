@@ -32,10 +32,11 @@ export default function AdminProducts() {
   const emptyForm = {
     name: '', category: '', subcategory: '', price: '', discountPrice: '',
     description: '', material: '', sku: '', stock: '50', status: 'Active',
-    badge: '', featured: false, visible: true, image: ''
+    badge: '', featured: false, visible: true, image: '', images: []
   };
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
   const filtered = useMemo(() => {
     let list = [...productList];
@@ -53,19 +54,25 @@ export default function AdminProducts() {
 
   const openAdd = () => {
     setEditId(null);
-    setForm({ ...emptyForm, sku: `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}` });
+    setForm({ ...emptyForm, sku: `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`, images: [] });
     setFormErrors({});
     setShowForm(true);
   };
 
   const openEdit = (p) => {
     setEditId(p.id);
+    const pImages = (p.images && p.images.length > 0)
+      ? p.images.map(img => (typeof img === 'string' ? img : img.url)).filter(Boolean)
+      : (p.image ? [p.image] : []);
+
     setForm({
       name: p.name, category: p.category, subcategory: p.subcategory || '',
-      price: String(p.price), discountPrice: '', description: p.description,
-      material: p.material || '', sku: `SKU-${p.id}`, stock: '50',
+      price: String(p.price), discountPrice: p.discountPrice ? String(p.discountPrice) : '', description: p.description,
+      material: p.material || '', sku: `SKU-${p.id}`, stock: String(p.stock ?? 50),
       status: p.inStock ? 'Active' : 'Out of Stock', badge: p.badge || '',
-      featured: !!p.badge, visible: true, image: p.image || ''
+      featured: !!p.badge, visible: true,
+      image: pImages[0] || p.image || '',
+      images: pImages,
     });
     setFormErrors({});
     setShowForm(true);
@@ -83,57 +90,47 @@ export default function AdminProducts() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm() || saving) return;
 
+    setSaving(true);
     const prodPrice = Number(form.price) || 0;
     const prodDiscountPrice = form.discountPrice ? Number(form.discountPrice) : undefined;
     const prodStock = Number(form.stock) || 50;
-    const prodImage = form.image?.trim() || `https://placehold.co/400x400/f8fafc/1A3673?text=${encodeURIComponent(form.name)}`;
+    const prodImages = (form.images && form.images.length > 0)
+      ? form.images.map(url => ({ url }))
+      : (form.image ? [{ url: form.image }] : [{ url: `https://placehold.co/400x400/f8fafc/1A3673?text=${encodeURIComponent(form.name)}` }]);
+    const primaryImage = prodImages[0]?.url || form.image || '';
 
-    if (editId) {
-      try {
-        await updateProduct(editId, {
-          name: form.name,
-          category: form.category,
-          subcategory: form.subcategory,
-          price: prodPrice,
-          discountPrice: prodDiscountPrice,
-          description: form.description,
-          material: form.material,
-          stock: prodStock,
-          badge: form.badge || '',
-          isFeatured: form.featured,
-          image: prodImage,
-          images: [{ url: prodImage }],
-        });
+    const payload = {
+      name: form.name,
+      category: form.category,
+      subcategory: form.subcategory,
+      price: prodPrice,
+      discountPrice: prodDiscountPrice,
+      description: form.description,
+      material: form.material,
+      stock: prodStock,
+      badge: form.badge || '',
+      isFeatured: form.featured,
+      image: primaryImage,
+      images: prodImages,
+    };
+
+    try {
+      if (editId) {
+        await updateProduct(editId, payload);
         showToast('Product updated successfully!', 'success');
-        await loadStoreFromAPI();
-      } catch (err) {
-        showToast('Failed to update product: ' + err.message, 'error');
-      }
-    } else {
-      try {
-        await createProduct({
-          name: form.name,
-          category: form.category,
-          subcategory: form.subcategory,
-          price: prodPrice,
-          discountPrice: prodDiscountPrice,
-          description: form.description,
-          material: form.material,
-          stock: prodStock,
-          badge: form.badge || '',
-          isFeatured: form.featured,
-          image: prodImage,
-          images: [{ url: prodImage }],
-        });
+      } else {
+        await createProduct(payload);
         showToast('Product added successfully!', 'success');
-        await loadStoreFromAPI();
-      } catch (err) {
-        showToast('Failed to add product: ' + err.message, 'error');
       }
+      setShowForm(false);
+      await loadStoreFromAPI();
+    } catch (err) {
+      showToast((editId ? 'Failed to update product: ' : 'Failed to add product: ') + err.message, 'error');
+    } finally {
+      setSaving(false);
     }
-    setShowForm(false);
   };
 
   const handleDelete = async () => {
@@ -148,26 +145,68 @@ export default function AdminProducts() {
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('image', file);
-
     try {
-      const data = await upload('/upload', formData);
-      if (data && data.url) {
-        setForm(prev => ({ ...prev, image: data.url }));
-        showToast('Image uploaded successfully', 'success');
+      const uploadedUrls = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+        const data = await upload('/upload', formData);
+        if (data && data.url) {
+          uploadedUrls.push(data.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setForm(prev => {
+          const currentImages = prev.images || [];
+          const updated = [...currentImages, ...uploadedUrls];
+          return {
+            ...prev,
+            images: updated,
+            image: updated[0] || '',
+          };
+        });
+        showToast(`Uploaded ${uploadedUrls.length} image${uploadedUrls.length > 1 ? 's' : ''} successfully!`, 'success');
       } else {
-        showToast(data?.error || 'Upload failed', 'error');
+        showToast('Image upload failed', 'error');
       }
     } catch (err) {
       showToast('Error uploading image: ' + err.message, 'error');
     } finally {
       setIsUploading(false);
+      if (e.target) e.target.value = '';
     }
+  };
+
+  const removeImageAt = (indexToRemove) => {
+    setForm(prev => {
+      const currentImages = prev.images || [];
+      const updated = currentImages.filter((_, idx) => idx !== indexToRemove);
+      return {
+        ...prev,
+        images: updated,
+        image: updated[0] || '',
+      };
+    });
+  };
+
+  const setAsCoverImage = (indexToCover) => {
+    setForm(prev => {
+      const currentImages = prev.images || [];
+      const target = currentImages[indexToCover];
+      const rest = currentImages.filter((_, idx) => idx !== indexToCover);
+      const reordered = [target, ...rest];
+      return {
+        ...prev,
+        images: reordered,
+        image: target,
+      };
+    });
+    showToast('Cover photo updated', 'success');
   };
 
   const showToast = (msg, type) => {
@@ -329,51 +368,135 @@ export default function AdminProducts() {
               </div>
 
               <div className="admin-form-card">
-                <h3>Product Image</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0 }}>Product Photos ({form.images?.length || (form.image ? 1 : 0)})</h3>
+                  {form.images?.length > 1 && (
+                    <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>
+                      First photo is Cover
+                    </span>
+                  )}
+                </div>
+
                 <div className="admin-form-group">
-                  <label className="admin-form-label">Upload Image</label>
                   <input 
                     type="file" 
                     id="productImageUpload"
                     accept="image/*"
+                    multiple
                     onChange={handleImageUpload} 
                     disabled={isUploading}
                     style={{ display: 'none' }}
                   />
                   <label htmlFor="productImageUpload" style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    padding: '32px 16px', border: '2px dashed var(--admin-border)', borderRadius: '12px',
+                    padding: form.images?.length > 0 ? '20px 16px' : '32px 16px',
+                    border: '2px dashed var(--admin-border)', borderRadius: '12px',
                     cursor: isUploading ? 'not-allowed' : 'pointer', background: '#f8fafc',
                     transition: 'all 0.2s', textAlign: 'center'
                   }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 36, color: 'var(--admin-text-light)', marginBottom: 12 }}>cloud_upload</span>
-                    <span style={{ fontWeight: 600, color: 'var(--admin-text)', marginBottom: 4 }}>
-                      {isUploading ? 'Uploading...' : 'Click to upload image'}
+                    <span className="material-symbols-outlined" style={{ fontSize: 32, color: isUploading ? 'var(--primary)' : 'var(--admin-text-light)', marginBottom: 8 }}>
+                      {isUploading ? 'sync' : 'add_photo_alternate'}
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--admin-text-light)' }}>SVG, PNG, JPG or GIF (max. 5MB)</span>
+                    <span style={{ fontWeight: 600, color: 'var(--admin-text)', marginBottom: 4, fontSize: 14 }}>
+                      {isUploading ? 'Uploading to Cloudinary...' : form.images?.length > 0 ? '+ Add More Photos' : 'Click to upload photos'}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--admin-text-light)' }}>
+                      Select one or multiple photos (PNG, JPG, WEBP)
+                    </span>
                   </label>
                 </div>
-                {form.image && (
-                  <div>
-                    <img src={form.image} alt="Preview" style={{ width: '100%', borderRadius: 8, border: '1px solid var(--admin-border)' }} />
-                    <button 
-                      type="button" 
-                      className="admin-btn admin-btn--secondary" 
-                      style={{ marginTop: 8, width: '100%' }}
-                      onClick={() => setForm({ ...form, image: '' })}
-                    >
-                      Remove Image
-                    </button>
+
+                {/* Uploaded Photos Grid */}
+                {form.images && form.images.length > 0 && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
+                    gap: 12,
+                    marginTop: 16
+                  }}>
+                    {form.images.map((imgUrl, idx) => (
+                      <div key={idx} style={{
+                        position: 'relative',
+                        borderRadius: 8,
+                        border: idx === 0 ? '2px solid var(--primary)' : '1px solid var(--admin-border)',
+                        overflow: 'hidden',
+                        background: '#f8fafc',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                      }}>
+                        <img 
+                          src={imgUrl} 
+                          alt={`Photo ${idx + 1}`} 
+                          style={{ width: '100%', height: 95, objectFit: 'contain', display: 'block', background: 'white' }} 
+                        />
+                        {idx === 0 ? (
+                          <span style={{
+                            position: 'absolute', top: 4, left: 4,
+                            background: 'var(--primary)', color: 'white',
+                            fontSize: 10, fontWeight: 700, padding: '2px 6px',
+                            borderRadius: 4, textTransform: 'uppercase', letterSpacing: 0.5
+                          }}>
+                            Cover
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setAsCoverImage(idx)}
+                            title="Set as Main Cover Photo"
+                            style={{
+                              position: 'absolute', top: 4, left: 4,
+                              background: 'rgba(15, 23, 42, 0.75)', color: 'white',
+                              border: 'none', borderRadius: 4, fontSize: 10,
+                              padding: '2px 6px', cursor: 'pointer', fontWeight: 600
+                            }}
+                          >
+                            Make Cover
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => removeImageAt(idx)}
+                          title="Remove Photo"
+                          style={{
+                            position: 'absolute', top: 4, right: 4,
+                            width: 24, height: 24, borderRadius: '50%',
+                            background: 'rgba(239, 68, 68, 0.9)', color: 'white',
+                            border: 'none', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', cursor: 'pointer', padding: 0
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>close</span>
+                        </button>
+
+                        <div style={{
+                          padding: '4px 6px', fontSize: 11, color: '#64748b',
+                          textAlign: 'center', background: '#f1f5f9', borderTop: '1px solid #e2e8f0'
+                        }}>
+                          Photo {idx + 1}
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                )}
+
+                {form.images && form.images.length > 0 && (
+                  <button 
+                    type="button" 
+                    className="admin-btn admin-btn--secondary" 
+                    style={{ marginTop: 14, width: '100%', fontSize: 13 }}
+                    onClick={() => setForm(prev => ({ ...prev, images: [], image: '' }))}
+                  >
+                    Remove All Photos
+                  </button>
                 )}
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
-                <button type="submit" className="admin-btn admin-btn--primary" style={{ flex: 1 }}>
-                  <span className="material-symbols-outlined">{editId ? 'save' : 'add'}</span>
-                  {editId ? 'Update Product' : 'Add Product'}
+                <button type="submit" className="admin-btn admin-btn--primary" style={{ flex: 1 }} disabled={saving}>
+                  <span className="material-symbols-outlined">{saving ? 'sync' : editId ? 'save' : 'add'}</span>
+                  {saving ? 'Saving...' : editId ? 'Update Product' : 'Add Product'}
                 </button>
-                <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button>
               </div>
             </div>
           </div>

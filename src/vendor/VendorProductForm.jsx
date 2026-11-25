@@ -31,9 +31,9 @@ export default function VendorProductForm() {
     description: '',
     material: '',
     image: '',
+    images: [],
   });
 
-  const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -45,6 +45,10 @@ export default function VendorProductForm() {
       getProduct(id)
         .then(res => {
           const p = res.product || res;
+          const pImages = (p.images && p.images.length > 0)
+            ? p.images.map(img => (typeof img === 'string' ? img : img.url)).filter(Boolean)
+            : (p.image ? [p.image] : []);
+
           setForm({
             name: p.name || '',
             category: p.category || CATEGORIES[0],
@@ -54,7 +58,8 @@ export default function VendorProductForm() {
             stock: p.stock ?? '50',
             description: p.description || '',
             material: p.material || '',
-            image: p.images?.[0]?.url || p.image || '',
+            image: pImages[0] || p.image || '',
+            images: pImages,
           });
         })
         .catch(err => setError(err.message || 'Failed to load product'))
@@ -63,28 +68,67 @@ export default function VendorProductForm() {
   }, [id, isEdit]);
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    setImageFile(file);
     setUploading(true);
     setError('');
 
-    const formData = new FormData();
-    formData.append('image', file);
-
     try {
-      const data = await upload('/upload', formData);
-      if (data && data.url) {
-        setForm(prev => ({ ...prev, image: data.url }));
+      const uploadedUrls = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+        const data = await upload('/upload', formData);
+        if (data && data.url) {
+          uploadedUrls.push(data.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setForm(prev => {
+          const combined = [...(prev.images || []), ...uploadedUrls];
+          return {
+            ...prev,
+            images: combined,
+            image: combined[0] || '',
+          };
+        });
       } else {
-        throw new Error(data?.error || 'Failed to upload image');
+        throw new Error('No images uploaded');
       }
     } catch (err) {
       setError(err.message || 'Image upload failed. You can also paste an image URL.');
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = '';
     }
+  };
+
+  const removeImageAt = (indexToRemove) => {
+    setForm(prev => {
+      const current = prev.images || [];
+      const updated = current.filter((_, idx) => idx !== indexToRemove);
+      return {
+        ...prev,
+        images: updated,
+        image: updated[0] || '',
+      };
+    });
+  };
+
+  const setAsCover = (indexToCover) => {
+    setForm(prev => {
+      const current = prev.images || [];
+      const target = current[indexToCover];
+      const rest = current.filter((_, idx) => idx !== indexToCover);
+      const reordered = [target, ...rest];
+      return {
+        ...prev,
+        images: reordered,
+        image: target,
+      };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -107,6 +151,10 @@ export default function VendorProductForm() {
 
     setSaving(true);
 
+    const prodImages = (form.images && form.images.length > 0)
+      ? form.images.map(url => ({ url }))
+      : (form.image ? [{ url: form.image }] : [{ url: `https://placehold.co/400x400/f8fafc/1A3673?text=${encodeURIComponent(form.name)}` }]);
+
     const payload = {
       name: form.name,
       category: form.category,
@@ -116,7 +164,8 @@ export default function VendorProductForm() {
       stock: Number(form.stock) || 0,
       description: form.description,
       material: form.material,
-      images: form.image ? [{ url: form.image }] : [{ url: `https://placehold.co/400x400/f8fafc/1A3673?text=${encodeURIComponent(form.name)}` }],
+      image: prodImages[0]?.url || form.image,
+      images: prodImages,
     };
 
     try {
@@ -264,31 +313,51 @@ export default function VendorProductForm() {
           </div>
 
           <div className="admin-form-group">
-            <label className="admin-form-label">Product Image</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label className="admin-form-label" style={{ margin: 0 }}>Product Photos ({form.images?.length || (form.image ? 1 : 0)})</label>
+              {form.images?.length > 1 && (
+                <span style={{ fontSize: 11, color: '#2563eb', fontWeight: 600 }}>First photo is Cover</span>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10 }}>
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageUpload}
                 disabled={uploading}
                 style={{ fontSize: 13 }}
               />
-              {uploading && <span style={{ fontSize: 12, color: '#64748b' }}>Uploading to storage...</span>}
+              {uploading && <span style={{ fontSize: 12, color: '#64748b' }}>Uploading photos...</span>}
             </div>
-            <input
-              type="url"
-              className="admin-form-input"
-              placeholder="Or enter image URL: https://..."
-              value={form.image}
-              onChange={e => setForm({ ...form, image: e.target.value })}
-            />
-            {form.image && (
-              <div style={{ marginTop: 12 }}>
-                <img
-                  src={form.image}
-                  alt="Preview"
-                  style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }}
-                />
+
+            {form.images && form.images.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10, marginTop: 12 }}>
+                {form.images.map((imgUrl, idx) => (
+                  <div key={idx} style={{ position: 'relative', borderRadius: 6, overflow: 'hidden', border: idx === 0 ? '2px solid #2563eb' : '1px solid #cbd5e1' }}>
+                    <img src={imgUrl} alt={`Photo ${idx + 1}`} style={{ width: '100%', height: 80, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
+                    {idx === 0 ? (
+                      <span style={{ position: 'absolute', top: 2, left: 2, background: '#2563eb', color: 'white', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>
+                        Cover
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setAsCover(idx)}
+                        style={{ position: 'absolute', top: 2, left: 2, background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none', fontSize: 9, padding: '1px 4px', borderRadius: 3, cursor: 'pointer' }}
+                      >
+                        Cover
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeImageAt(idx)}
+                      style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'red', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

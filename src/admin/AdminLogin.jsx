@@ -83,7 +83,7 @@ export default function AdminLogin() {
         </form>
 
         <p className="auth-footer-text">
-          Demo: admin@snapdent.com / admin123
+          {/* Demo: admin@snapdent.com / admin123 */}
         </p>
 
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
